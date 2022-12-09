@@ -16,11 +16,11 @@ class MyPublisherNode(DTROS):
 
     def run(self):
         # publish message every 1 second
-        rate = rospy.Rate(20) # 1Hz
+        rate = rospy.Rate(1) # 1Hz
         while not rospy.is_shutdown():
 
-            SMBus(12).pec = 1  # Enable PEC
-            lanereader_value = SMBus(12).read_byte_data(0x3e, 0x11)
+            #SMBus(1) = 1  # Enable PEC
+            lanereader_value = SMBus(1).read_byte_data(0x3e, 0x11)
 
             rospy.loginfo(f"Lanereader: '{lanereader_value}'")
             self.pub.publish(str(lanereader_value))
