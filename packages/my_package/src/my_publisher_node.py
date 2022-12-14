@@ -13,7 +13,7 @@ class MyPublisherNode(DTROS):
         # initialize the DTROS parent class
         super(MyPublisherNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         # construct publisher
-        self.pub = rospy.Publisher('josmo/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=10)
+        self.pub = rospy.Publisher('/josmo/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=10)
 
 #    def on_shutdown(self):
 #        speed.vel_left = 0
@@ -28,34 +28,77 @@ class MyPublisherNode(DTROS):
         while not rospy.is_shutdown():
 
             read = SMBus(1).read_byte_data(0x3e, 0x11)
+            #read= bin(read)
 
-            if read <= 223 and read > 0:
-                speed.vel_left = 0.5
-                speed.vel_right = 0
-                flag = 0
-
-            if read >= 251 and read < 255:
-                speed.vel_left = 0
-                speed.vel_right = 0.5
-                flag = 1
-
-            if read > 223 and read < 251:
-                speed.vel_left = 0.3
-                speed.vel_right = 0.3
+            # oooXXooo
+            if read == 231:
+                speed.vel_left = 0.4
+                speed.vel_right = 0.4
+                print("OTSE")
                 
-            if read == 0:
-                speed.vel_right = -0.3
-                speed.vel_left = -0.3
+            # ooooXooo
+            if read == 239:
+                speed.vel_left = 0.3
+                speed.vel_right = 0.38
+                print("NATUKE VASAKULE")
+            # ooooXXoo    
+            if read == 207 :
+                speed.vel_left = 0.1
+                speed.vel_right = 0.2
+                print("VASAKULE")
 
-            if read == 255 and flag == 1:
+            # oooooXXo    
+            if read == 159 :
                 speed.vel_left = 0
-                speed.vel_right = 0.5
-            if read == 255 and flag == 0:
+                speed.vel_right = 0.15
+                print("R2IGELT VASAKULE")
+
+            if read == 127 :
+                speed.vel_left = -0.20
+                speed.vel_right = 0.225
+                print("R2IGEMALT VASAKULE")
+                rospy.sleep(0.15)
+################################################
+            # oooXoooo                   
+            if read == 247 :
+                speed.vel_left = 0.3
+                speed.vel_right = 0.38
+                print("NATUKE PAREMALE")
+            #ooXXoooo
+            if read == 243 :
+                speed.vel_left = 0.2
+                speed.vel_right = 0.1
+                print("PAREMALE")
+
+            if read == 249 :
+                speed.vel_left = 0.15
                 speed.vel_right = 0
-                speed.vel_left = 0.5
+                print("R2IGELT PAREMALE")  
+
+            if read == 254 :
+                speed.vel_left = 0.225
+                speed.vel_right = -0.20
+                print("R2IGEMALT PAREMALE")
+                rospy.sleep(0.15)
+
+
+
+        
+            rospy.sleep(0.02)
+
+
+
+
+
+            # oooooooo
+            if read == 255 :
+                speed.vel_left = 0
+                speed.vel_right = 0
+                print("STOP")
+
                 
             print(read)
-            read.close()
+            
             self.pub.publish(speed)
             rate.sleep()
 
