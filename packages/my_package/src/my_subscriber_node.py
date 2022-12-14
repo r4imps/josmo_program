@@ -11,10 +11,11 @@ class MySubscriberNode(DTROS):
         # initialize the DTROS parent class
         super(MySubscriberNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         # construct publisher
-        self.sub = rospy.Subscriber('~chatter', String, self.callback)
+        self.sub = rospy.Subscriber('sparkfun_line_array', String, self.callback)
 
     def callback(self, data):
         rospy.loginfo("I heard %s", data.data)
+        
 
 if __name__ == '__main__':
     # create the node

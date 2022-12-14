@@ -2,12 +2,11 @@
 
 import os
 import rospy
-import time 
-from duckietown.dtros import DTROS, NodeType, TopicType
+from duckietown.dtros import DTROS, NodeType
 from std_msgs.msg import String
+from duckietown_msgs.msg import WheelsCmdStamped
 from smbus2 import SMBus
-from duckietown_msgs.msg import WheelsCmdStamped, Twist2DStamped
-
+speed = WheelsCmdStamped()
 class MyPublisherNode(DTROS):
 
     def __init__(self, node_name):
@@ -15,35 +14,50 @@ class MyPublisherNode(DTROS):
         super(MyPublisherNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         # construct publisher
         self.pub = rospy.Publisher('josmo/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=10)
-        # Setup publishers
-        
-    
+
+#    def on_shutdown(self):
+#        speed.vel_left = 0
+#        speed.vel_right = 0
+#        self.pub.publish(speed)
+#        rospy.on_shutdown()
 
     def run(self):
+        flag = 0
         # publish message every 1 second
-        rate = rospy.Rate(20)
-        msg_wheels_cmd = WheelsCmdStamped()
+        rate = rospy.Rate(20) # 1Hz
         while not rospy.is_shutdown():
 
-            self.lanereader_value = SMBus(1).read_byte_data(0x3e, 0x11)
-            #rospy.loginfo(f"Lanereader: '{self.lanereader_value}'")
-            #self.pub.publish(str(self.lanereader_value))
-             
+            read = SMBus(1).read_byte_data(0x3e, 0x11)
 
+            if read <= 223 and read > 0:
+                speed.vel_left = 0.5
+                speed.vel_right = 0
+                flag = 0
 
-    
+            if read >= 251 and read < 255:
+                speed.vel_left = 0
+                speed.vel_right = 0.5
+                flag = 1
 
-            msg_wheels_cmd.vel_right = 1.0
-            msg_wheels_cmd.vel_left = 1.0
-            time.sleep(2)
-            msg_wheels_cmd.vel_right = 0
-            msg_wheels_cmd.vel_left = 0
+            if read > 223 and read < 251:
+                speed.vel_left = 0.3
+                speed.vel_right = 0.3
+                
+            if read == 0:
+                speed.vel_right = -0.3
+                speed.vel_left = -0.3
 
-            self.pub.publish(msg_wheels_cmd)
-            
-
+            if read == 255 and flag == 1:
+                speed.vel_left = 0
+                speed.vel_right = 0.5
+            if read == 255 and flag == 0:
+                speed.vel_right = 0
+                speed.vel_left = 0.5
+                
+            print(read)
+            read.close()
+            self.pub.publish(speed)
             rate.sleep()
-
 
 if __name__ == '__main__':
     # create the node
