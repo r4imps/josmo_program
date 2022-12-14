@@ -13,7 +13,7 @@ dt-launchfile-init
 
 # launching app
 #roslaunch my_package multiple_nodes.launch veh:=$VEHICLE_NAME
-dt-exec rosrun line_follower line_follower.py
+dt-exec roslaunch my_package multiple_nodes.launch
 
 # ----------------------------------------------------------------------------
 # YOUR CODE ABOVE THIS LINE
