@@ -4,6 +4,7 @@ import os
 import rospy
 from duckietown.dtros import DTROS, NodeType
 from std_msgs.msg import String
+from smbus2 import SMBus
 
 class MySubscriberNode(DTROS):
 
@@ -11,10 +12,16 @@ class MySubscriberNode(DTROS):
         # initialize the DTROS parent class
         super(MySubscriberNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         # construct publisher
-        self.sub = rospy.Subscriber('~chatter', String, self.callback)
+        self.sub = rospy.Subscriber('sparkfun_line_array', String, self.callback)
 
-    def callback(self, data):
-        rospy.loginfo("I heard %s", data.data)
+    def run(self, data):
+        rate = rospy.Rate(20)
+        while not rospy.is_shutdown():
+            lanereader_value = SMBus(1).read_byte(0x3e, 0x11)
+
+            rospy.loginfo(f"Lanereader: {lanereader_value}"
+            self.sub.publish(str(lanereader_value))
+
 
 if __name__ == '__main__':
     # create the node
