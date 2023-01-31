@@ -4,6 +4,7 @@ import os
 import rospy
 from duckietown.dtros import DTROS, NodeType
 from std_msgs.msg import String
+from sensor_msgs.msg import Range
 
 class MySubscriberNode(DTROS):
 
