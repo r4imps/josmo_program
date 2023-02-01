@@ -33,14 +33,17 @@ class ROSPROG(DTROS):
         self.distance=1.0
         self.R_encoder=0
         self.L_encoder=0
+        self.sec=0
         
 
     def callback(self, data):
 
         self.distance = data.range
 
+
     def Callback_R_Encoder(self,data):
         self.R_encoder = data.data
+        self.sec= data.header.seq
 
     def Callback_L_Encoder(self,data):
         self.L_encoder = data.data
@@ -59,12 +62,24 @@ class ROSPROG(DTROS):
     def run(self):
         rate = rospy.Rate(10)
         flag=1
-        R_Distance=0
-        L_Distance=0
+        so=0
+
         Save_L_en=0
         Save_R_en=0
         Display_L_en=0
         Display_R_en=0
+
+        Sec_save=0
+  
+
+        Dst_Save=0
+        
+        R_Distance=0
+        L_Distance=0
+        Save_R_deg=0
+        Save_L_deg=0
+
+####################
         N_tot= 135
         R=0.03424
         baseline_wheel2wheel= 0.1
@@ -75,6 +90,7 @@ class ROSPROG(DTROS):
         Wheel2R=R*R
         Delta_x=0
         Delta_y=0
+
 
         while not rospy.is_shutdown():
             read = SMBus(1).read_byte_data(0x3e, 0x11)
@@ -93,14 +109,14 @@ class ROSPROG(DTROS):
                                                             #rataste encoderite nullimine
 
            
-            L_Rotation= Display_L_en * ((2*np.pi)/N_tot)
-            print(f"The left wheel rotated: {np.rad2deg(L_Rotation)} degrees")
-            R_Rotation= Display_R_en * ((2*np.pi)/N_tot)
-            print(f"The right wheel rotated: {np.rad2deg(R_Rotation)} degrees")
+            L_Rotation= np.rad2deg(Display_L_en * ((2*np.pi)/N_tot))
+            print(f"The left wheel rotated: {L_Rotation} degrees")
+            R_Rotation= np.rad2deg(Display_R_en * ((2*np.pi)/N_tot))
+            print(f"The right wheel rotated: {R_Rotation} degrees")
             L_Distance= R*L_Rotation
-            print(f"The left wheel travel: {round(L_Distance,3)} meters")
+            print(f"The left wheel travel: {round(L_Distance,4)} cm")
             R_Distance= R*R_Rotation
-            print(f"The righ wheel travel: {round(R_Distance,3)} meters")
+            print(f"The righ wheel travel: {round(R_Distance,4)} cm")
 
             Delta_A=(R_Distance+L_Distance)/2
             print(f"Delta distance: {round(Delta_A,3)}")
@@ -115,17 +131,136 @@ class ROSPROG(DTROS):
             #Distance= (L_Distance+R_Distance)/2
             #print(f"Distance average travel: {round(Distance ,3)} meters")
 
+            if self.distance<0.3 and so==0:
+                speed.vel_right=0
+                speed.vel_left=0
+                Save_R_deg= R_Rotation
+                Save_L_deg= L_Rotation
+                so=10
 
+            #Keerab alguses
+            if so == 10:
 
+                speed.vel_right=0.17
+                speed.vel_left=-0.17
 
+                so=20
 
+            if so == 20 and (Save_R_deg+90 < R_Rotation) and (Save_L_deg-90 > L_Rotation):
+                speed.vel_right=0.0
+                speed.vel_left=0.0
                 
-        
-            #print("SO---"+(str(so)))
+                Sec_save=self.sec
+                
+                so=30
+
+            if so == 30 and (Sec_save+10<self.sec):
+
+                speed.vel_right=0.2
+                speed.vel_left=0.2
+                Dst_Save=Delta_A
+                so=40
+
+
+            if so == 40 and (Dst_Save+3.0< Delta_A) and ( Dst_Save+3.0<Delta_A):
+                speed.vel_right=0.0
+                speed.vel_left=0.0
+                Save_R_deg= R_Rotation
+                Save_L_deg= L_Rotation                
+                Sec_save=self.sec
+                so=50
+            if so == 50 and (Sec_save+10<self.sec):    
+                speed.vel_right=-0.17
+                speed.vel_left=0.17
+
+                so=60
+
+            if so == 60 and (Save_R_deg-90 < R_Rotation) and (Save_L_deg+90 > L_Rotation):
+                speed.vel_right=0.0
+                speed.vel_left=0.0
+                Sec_save=self.sec
+                so=70
+
+            if so == 70 and (Sec_save+10<self.sec):
+
+                speed.vel_right=0.2
+                speed.vel_left=0.2
+                
+                Dst_Save=Delta_A
+                so=80
+
+
+            if so == 80 and (Dst_Save+2.0< Delta_A) and ( Dst_Save+2.0<Delta_A):
+                speed.vel_right=0.0
+                speed.vel_left=0.0
+                Sec_save=self.sec
+
+                so=90
+            
+            if so==90 and (Sec_save+10<self.sec):
+                speed.vel_right=-0.17
+                speed.vel_left=0.17
+                Save_R_deg= R_Rotation
+                Save_L_deg= L_Rotation
+                so=100
+
+
+            if so == 100 and (Save_R_deg-90 < R_Rotation) and (Save_L_deg+90 > L_Rotation):
+                speed.vel_right=0.0
+                speed.vel_left=0.0
+                
+                Sec_save=self.sec
+                
+                so=110
+
+            if so == 110 and (Sec_save+10<self.sec):
+
+                speed.vel_right=0.2
+                speed.vel_left=0.2
+                Dst_Save=Delta_A
+                so=120
+
+
+            if so == 120 and (Dst_Save+2.0< Delta_A) and ( Dst_Save+2.0<Delta_A):
+                speed.vel_right=0.0
+                speed.vel_left=0.0
+                Sec_save=self.sec
+                so=130
+
+            if so == 130 and (Sec_save+10<self.sec):
+                speed.vel_right=-0.17
+                speed.vel_left=0.17
+                Save_R_deg= R_Rotation
+                Save_L_deg= L_Rotation
+ 
+                so=140        
+
+
+
+            if so == 140 and (Save_R_deg+90 < R_Rotation) and (Save_L_deg-90 > L_Rotation):
+                speed.vel_right=0.0
+                speed.vel_left=0.0
+                
+                Sec_save=self.sec
+                
+                so=150
+
+            if so == 150 and (Sec_save+10<self.sec):
+
+                speed.vel_right=0.0
+                speed.vel_left=0.0
+                Dst_Save=Delta_A
+                so=0
+
+
+
+            print("SO---"+(str(so)))
+            print("Sec "+(str(self.sec)))
+            print("Sec save "+(str(Sec_save)))
             #print("LAST R ENCODER: "+(str(Last_R_encoder)))
             #print("LAST L ENCODER: "+(str(N_tot)))
-            #print("SAVE R: "+(str(Save_R_en)))
-            #print("SAVE L: "+(str(Save_L_en)))
+            print("DST Delta: "+(str(Delta_A)))
+            print("Distance SAVE Delta: "+(str(Dst_Save)))
             print("DISPLAY R ENCODER: "+(str(Display_R_en)))
             print("DISPLAY L ENCODER: "+(str(Display_L_en)))
             #print(self.R_encoder)
