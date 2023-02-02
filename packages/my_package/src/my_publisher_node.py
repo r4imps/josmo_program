@@ -108,7 +108,8 @@ class ROSPROG(DTROS):
                 flag = 0
                                                             #rataste encoderite nullimine
 
-           
+            print("=========================================================")
+            print("SO---"+(str(so)))
             L_Rotation= np.rad2deg(Display_L_en * ((2*np.pi)/N_tot))
             print(f"The left wheel rotated: {L_Rotation} degrees")
             R_Rotation= np.rad2deg(Display_R_en * ((2*np.pi)/N_tot))
@@ -119,14 +120,14 @@ class ROSPROG(DTROS):
             print(f"The righ wheel travel: {round(R_Distance,4)} cm")
 
             Delta_A=(R_Distance+L_Distance)/2
-            print(f"Delta distance: {round(Delta_A,3)}")
+            print(f"Delta distance:===== {round(Delta_A,3)} =====")
             Delta_null= (R_Distance-L_Distance)/Back2L
             print(f"Delta rotation: {round(Delta_null,3)}")
 
             Delta_x=Delta_A*np.cos(Delta_null)
-            print(f"Delta X: {round(Delta_x,3)}")
+            print(f"Delta X:================= {round(Delta_x,3)} ================")
             Delta_y=Delta_A*np.sin(Delta_null)
-            print(f"Delta Y: {round(Delta_y,3)}")
+            print(f"Delta Y:================= {round(Delta_y,3)} ================")
 
             #Distance= (L_Distance+R_Distance)/2
             #print(f"Distance average travel: {round(Distance ,3)} meters")
@@ -134,139 +135,127 @@ class ROSPROG(DTROS):
             if self.distance<0.3 and so==0:
                 speed.vel_right=0
                 speed.vel_left=0
-                Save_R_deg= R_Rotation
-                Save_L_deg= L_Rotation
+                Save_R_deg= R_Rotation+75
+                Save_L_deg= L_Rotation-90
                 so=10
 
             #Keerab alguses
             if so == 10:
-
-                speed.vel_right=0.17
-                speed.vel_left=-0.17
+                speed.vel_right=0.13
+                speed.vel_left=-0.13
 
                 so=20
 
-            if so == 20 and (Save_R_deg+90 < R_Rotation) and (Save_L_deg-90 > L_Rotation):
+            if so == 20 and (Save_R_deg < R_Rotation) and (Save_L_deg > L_Rotation):
                 speed.vel_right=0.0
                 speed.vel_left=0.0
-                
+                Dst_Save=Delta_A
                 Sec_save=self.sec
-                
                 so=30
 
             if so == 30 and (Sec_save+10<self.sec):
-
                 speed.vel_right=0.2
                 speed.vel_left=0.2
-                Dst_Save=Delta_A
                 so=40
 
 
-            if so == 40 and (Dst_Save+3.0< Delta_A) and ( Dst_Save+3.0<Delta_A):
+            if so == 40 and (Dst_Save+20.0< Delta_A):
                 speed.vel_right=0.0
                 speed.vel_left=0.0
-                Save_R_deg= R_Rotation
-                Save_L_deg= L_Rotation                
+                Save_R_deg= R_Rotation-90
+                Save_L_deg= L_Rotation+90               
                 Sec_save=self.sec
                 so=50
-            if so == 50 and (Sec_save+10<self.sec):    
-                speed.vel_right=-0.17
-                speed.vel_left=0.17
-
+            if so == 50 and (Sec_save+20<self.sec):    
+                speed.vel_right=-0.13
+                speed.vel_left=0.13
                 so=60
 
-            if so == 60 and (Save_R_deg-90 < R_Rotation) and (Save_L_deg+90 > L_Rotation):
+            if so == 60 and (Save_R_deg> R_Rotation) and (Save_L_deg < L_Rotation):
                 speed.vel_right=0.0
                 speed.vel_left=0.0
+                
                 Sec_save=self.sec
                 so=70
 
             if so == 70 and (Sec_save+10<self.sec):
-
+                Dst_Save=Delta_A
                 speed.vel_right=0.2
                 speed.vel_left=0.2
-                
-                Dst_Save=Delta_A
                 so=80
 
 
-            if so == 80 and (Dst_Save+2.0< Delta_A) and ( Dst_Save+2.0<Delta_A):
+            if so == 80 and (Dst_Save+20.0< Delta_A):
                 speed.vel_right=0.0
                 speed.vel_left=0.0
+                Save_R_deg= R_Rotation-90
+                Save_L_deg= L_Rotation+90
                 Sec_save=self.sec
-
                 so=90
             
             if so==90 and (Sec_save+10<self.sec):
-                speed.vel_right=-0.17
-                speed.vel_left=0.17
-                Save_R_deg= R_Rotation
-                Save_L_deg= L_Rotation
+                speed.vel_right=-0.13
+                speed.vel_left=0.13
                 so=100
 
 
-            if so == 100 and (Save_R_deg-90 < R_Rotation) and (Save_L_deg+90 > L_Rotation):
+            if so == 100 and (Save_R_deg> R_Rotation) and (Save_L_deg < L_Rotation):
                 speed.vel_right=0.0
                 speed.vel_left=0.0
-                
+                Dst_Save=Delta_A
                 Sec_save=self.sec
-                
                 so=110
 
             if so == 110 and (Sec_save+10<self.sec):
-
                 speed.vel_right=0.2
                 speed.vel_left=0.2
-                Dst_Save=Delta_A
                 so=120
 
 
-            if so == 120 and (Dst_Save+2.0< Delta_A) and ( Dst_Save+2.0<Delta_A):
+            if so == 120 and (Dst_Save+20.0< Delta_A):
                 speed.vel_right=0.0
                 speed.vel_left=0.0
+                Save_R_deg= R_Rotation+50
+                Save_L_deg= L_Rotation-50
                 Sec_save=self.sec
                 so=130
 
             if so == 130 and (Sec_save+10<self.sec):
-                speed.vel_right=-0.17
-                speed.vel_left=0.17
-                Save_R_deg= R_Rotation
-                Save_L_deg= L_Rotation
- 
+                speed.vel_right=0.13
+                speed.vel_left=-0.13
                 so=140        
 
-
-
-            if so == 140 and (Save_R_deg+90 < R_Rotation) and (Save_L_deg-90 > L_Rotation):
+            if so == 140 and (Save_R_deg < R_Rotation) and (Save_L_deg > L_Rotation):
                 speed.vel_right=0.0
                 speed.vel_left=0.0
-                
                 Sec_save=self.sec
-                
+                Dst_Save=Delta_A
                 so=150
 
             if so == 150 and (Sec_save+10<self.sec):
-
                 speed.vel_right=0.0
                 speed.vel_left=0.0
-                Dst_Save=Delta_A
                 so=0
+            
 
 
-
-            print("SO---"+(str(so)))
+            
             print("Sec "+(str(self.sec)))
-            print("Sec save "+(str(Sec_save)))
+            print(f"Sec save                        :  {str(Sec_save)}")
             #print("LAST R ENCODER: "+(str(Last_R_encoder)))
             #print("LAST L ENCODER: "+(str(N_tot)))
-            print("DST Delta: "+(str(Delta_A)))
-            print("Distance SAVE Delta: "+(str(Dst_Save)))
-            print("DISPLAY R ENCODER: "+(str(Display_R_en)))
-            print("DISPLAY L ENCODER: "+(str(Display_L_en)))
+            print("Save Left Degrees                 : "+(str(Save_L_deg)))
+            print("Save Right Degrees                : "+(str(Save_R_deg)))
+            
+
+
+            print("Distance SAVE Delta                : "+((str(round(Dst_Save,3)))))
+            #print("DISPLAY R ENCODER: "+(str(Display_R_en)))
+            #print("DISPLAY L ENCODER: "+(str(Display_L_en)))
             #print(self.R_encoder)
             #print(self.L_encoder)
             #print("ToF Distance: "+(str(self.distance)))
-            print("Joon"+(str(read)))
+            #print("Joon"+(str(read)))
             self.pub.publish(speed)
 
             rate.sleep()
