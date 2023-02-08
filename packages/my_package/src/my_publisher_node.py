@@ -13,10 +13,6 @@ speed = WheelsCmdStamped()
 
 
 
-
-
-
-
 class ROSPROG(DTROS):
     def __init__(self, node_name):
 
@@ -37,7 +33,7 @@ class ROSPROG(DTROS):
         
 
     def callback(self, data):
-
+        
         self.distance = data.range
 
 
@@ -62,8 +58,8 @@ class ROSPROG(DTROS):
     def run(self):
         rate = rospy.Rate(10)
         flag=1
-        so=0
-
+        read_converted=0
+        #v_0= 0.5
         Save_L_en=0
         Save_R_en=0
         Display_L_en=0
@@ -87,169 +83,128 @@ class ROSPROG(DTROS):
         Delta_null=0
         Delta_A=0
         Back2L= baseline_wheel2wheel
-        Wheel2R=R*R
         Delta_x=0
         Delta_y=0
+        Joonebitid=['10000000',
+        '11000000',
+        '01000000',
+        '01100000',
+        '00100000',
+        '00110000',
+        '00010000',
+        '00011000',
+        '00001000',
+        '00001100',
+        '00000100',
+        '00000110',
+        '00000010',
+        '00000011',
+        '00000001']
 
+        prev_error=0
+        prev_int=0
+        error=0
+        PID_Time_Last=self.sec+1
+        PID_STRT=True
+
+
+        
+        P=0
+        I=0
+        D=0
+
+        
 
         while not rospy.is_shutdown():
             read = SMBus(1).read_byte_data(0x3e, 0x11)
+            
+            
+
+
             #Encoder Zeroing
             if (self.L_encoder>0 or self.R_encoder>0) and flag == 0:
                 Display_L_en=self.L_encoder-Save_L_en
                 Display_R_en=self.R_encoder-Save_R_en
-
-
-            
             elif flag == 1 and (self.L_encoder != 0 or self.R_encoder!=0):
                 Save_L_en = self.L_encoder
                 Save_R_en = self.R_encoder
-
                 flag = 0
-                                                            #rataste encoderite nullimine
+ 
 
-            print("=========================================================")
-            print("SO---"+(str(so)))
-            L_Rotation= np.rad2deg(Display_L_en * ((2*np.pi)/N_tot))
-            print(f"The left wheel rotated: {L_Rotation} degrees")
-            R_Rotation= np.rad2deg(Display_R_en * ((2*np.pi)/N_tot))
-            print(f"The right wheel rotated: {R_Rotation} degrees")
-            L_Distance= R*L_Rotation
-            print(f"The left wheel travel: {round(L_Distance,4)} cm")
-            R_Distance= R*R_Rotation
-            print(f"The righ wheel travel: {round(R_Distance,4)} cm")
-
-            Delta_A=(R_Distance+L_Distance)/2
-            print(f"Delta distance:===== {round(Delta_A,3)} =====")
-            Delta_null= (R_Distance-L_Distance)/Back2L
-            print(f"Delta rotation: {round(Delta_null,3)}")
-
-            Delta_x=Delta_A*np.cos(Delta_null)
-            print(f"Delta X:================= {round(Delta_x,3)} ================")
-            Delta_y=Delta_A*np.sin(Delta_null)
-            print(f"Delta Y:================= {round(Delta_y,3)} ================")
-
-            #Distance= (L_Distance+R_Distance)/2
-            #print(f"Distance average travel: {round(Distance ,3)} meters")
-
-            if self.distance<0.3 and so==0:
+            bits_block=bin(read)[2:]
+            leading_zeros = 8 - len(bits_block)
+            bits = leading_zeros*'0' + bits_block
+            if bits in Joonebitid:
+                index = Joonebitid.index(bits)
+                print(index)
+                PID_STRT=True
+            elif bits == '11111111' or bits== '00000000':
                 speed.vel_right=0
                 speed.vel_left=0
-                Save_R_deg= R_Rotation+75
-                Save_L_deg= L_Rotation-90
-                so=10
-
-            #Keerab alguses
-            if so == 10:
-                speed.vel_right=0.13
-                speed.vel_left=-0.13
-
-                so=20
-
-            if so == 20 and (Save_R_deg < R_Rotation) and (Save_L_deg > L_Rotation):
-                speed.vel_right=0.0
-                speed.vel_left=0.0
-                Dst_Save=Delta_A
-                Sec_save=self.sec
-                so=30
-
-            if so == 30 and (Sec_save+10<self.sec):
-                speed.vel_right=0.2
-                speed.vel_left=0.2
-                so=40
-
-
-            if so == 40 and (Dst_Save+20.0< Delta_A):
-                speed.vel_right=0.0
-                speed.vel_left=0.0
-                Save_R_deg= R_Rotation-90
-                Save_L_deg= L_Rotation+90               
-                Sec_save=self.sec
-                so=50
-            if so == 50 and (Sec_save+20<self.sec):    
-                speed.vel_right=-0.13
-                speed.vel_left=0.13
-                so=60
-
-            if so == 60 and (Save_R_deg> R_Rotation) and (Save_L_deg < L_Rotation):
-                speed.vel_right=0.0
-                speed.vel_left=0.0
+                PID_STRT=False    
                 
-                Sec_save=self.sec
-                so=70
-
-            if so == 70 and (Sec_save+10<self.sec):
-                Dst_Save=Delta_A
-                speed.vel_right=0.2
-                speed.vel_left=0.2
-                so=80
-
-
-            if so == 80 and (Dst_Save+20.0< Delta_A):
-                speed.vel_right=0.0
-                speed.vel_left=0.0
-                Save_R_deg= R_Rotation-90
-                Save_L_deg= L_Rotation+90
-                Sec_save=self.sec
-                so=90
+                        
+            PID_Time= self.sec
+            #PID
+            if PID_STRT ==True and (PID_Time>0) and PID_DELTA!=0:
+                Kp, Ki, Kd ,v_0 = rospy.get_param("/v_pid")
+                #0.003 #
+                error= 7 - index
+                P= error
+                I=prev_int+(PID_DELTA*error)
+                I = max(min(I,0.5),-0.5)
+                D=((error-prev_error)/PID_DELTA)
+                PID= Kp*P+Ki*I+Kd*D
+                print(f'SEE ON ERROR : {error},    PREVIOUS INT : {prev_int}')
+                print(f'PID:{PID},       TIME: {PID_Time} ,              LAST_TIME: {PID_Time_Last} ')
+                
+                
+                speed.vel_right=v_0+PID
+                speed.vel_left=v_0-PID
+                print(f'RIGHT: {v_0+PID},    LEFT : {v_0-PID}')
+                print("=========================================================")
+                print(bits)
             
-            if so==90 and (Sec_save+10<self.sec):
-                speed.vel_right=-0.13
-                speed.vel_left=0.13
-                so=100
-
-
-            if so == 100 and (Save_R_deg> R_Rotation) and (Save_L_deg < L_Rotation):
-                speed.vel_right=0.0
-                speed.vel_left=0.0
-                Dst_Save=Delta_A
-                Sec_save=self.sec
-                so=110
-
-            if so == 110 and (Sec_save+10<self.sec):
-                speed.vel_right=0.2
-                speed.vel_left=0.2
-                so=120
-
-
-            if so == 120 and (Dst_Save+20.0< Delta_A):
-                speed.vel_right=0.0
-                speed.vel_left=0.0
-                Save_R_deg= R_Rotation+50
-                Save_L_deg= L_Rotation-50
-                Sec_save=self.sec
-                so=130
-
-            if so == 130 and (Sec_save+10<self.sec):
-                speed.vel_right=0.13
-                speed.vel_left=-0.13
-                so=140        
-
-            if so == 140 and (Save_R_deg < R_Rotation) and (Save_L_deg > L_Rotation):
-                speed.vel_right=0.0
-                speed.vel_left=0.0
-                Sec_save=self.sec
-                Dst_Save=Delta_A
-                so=150
-
-            if so == 150 and (Sec_save+10<self.sec):
-                speed.vel_right=0.0
-                speed.vel_left=0.0
-                so=0
             
-
-
+            PID_DELTA= PID_Time-PID_Time_Last
             
-            print("Sec "+(str(self.sec)))
-            print(f"Sec save                        :  {str(Sec_save)}")
+            PID_Time_Last=PID_Time
+            prev_int=I
+            prev_error=error
+
+        
+           
+            L_Rotation= Display_L_en * ((2*np.pi)/N_tot)
+            #print(f"The left wheel rotated: {L_Rotation} degrees")
+
+            R_Rotation= Display_R_en * ((2*np.pi)/N_tot)
+            #print(f"The right wheel rotated: {R_Rotation} degrees")
+
+            L_Distance= R*L_Rotation
+            #print(f"The left wheel travel: {round(L_Distance,4)} m")
+
+            R_Distance= R*R_Rotation
+            #print(f"The righ wheel travel: {round(R_Distance,4)} m")
+
+            Delta_A=(R_Distance+L_Distance)/2
+            #print(f"Delta distance:===== {round(Delta_A,3)} =====")
+
+            Delta_null= (R_Distance-L_Distance)/Back2L
+            #print(f"Delta rotation: {round(Delta_null,3)}")
+
+            Delta_x=Delta_A*np.cos(Delta_null)
+            #print(f"Delta X:================= {round(Delta_x,2)} ================")
+
+            Delta_y=Delta_A*np.sin(Delta_null)
+            #print(f"Delta Y:================= {round(Delta_y,2)} ================")
+
+            #print("Sec "+(str(self.sec)))
+            #print(f"Sec save                        :  {str(Sec_save)}")
             #print("LAST R ENCODER: "+(str(Last_R_encoder)))
             #print("LAST L ENCODER: "+(str(N_tot)))
-            print("Save Left Degrees                 : "+(str(Save_L_deg)))
-            print("Save Right Degrees                : "+(str(Save_R_deg)))
-            
-
-
-            print("Distance SAVE Delta                : "+((str(round(Dst_Save,3)))))
+            #print("Save Left Degrees                 : "+(str(Save_L_deg)))
+            #print("Save Right Degrees                : "+(str(Save_R_deg)))
+            #print("Distance SAVE Delta                : "+((str(round(Dst_Save,3)))))
             #print("DISPLAY R ENCODER: "+(str(Display_R_en)))
             #print("DISPLAY L ENCODER: "+(str(Display_L_en)))
             #print(self.R_encoder)
@@ -257,7 +212,6 @@ class ROSPROG(DTROS):
             #print("ToF Distance: "+(str(self.distance)))
             #print("Joon"+(str(read)))
             self.pub.publish(speed)
-
             rate.sleep()
 
 if __name__ == '__main__':
