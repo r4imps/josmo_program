@@ -20,6 +20,8 @@ class ROSPROG(DTROS):
         super(ROSPROG, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         # SUBSCRIBERID JA PUBLISHERID
         self.pub = rospy.Publisher('/josmo/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=10)
+        
+    
         rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback)
 
         rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
@@ -56,10 +58,11 @@ class ROSPROG(DTROS):
 
 
     def run(self):
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(50)
         flag=1
+        flagtwo=0
         read_converted=0
-        #v_0= 0.5
+        v_0= 0.5
         Save_L_en=0
         Save_R_en=0
         Display_L_en=0
@@ -85,43 +88,63 @@ class ROSPROG(DTROS):
         Back2L= baseline_wheel2wheel
         Delta_x=0
         Delta_y=0
-        Joonebitid=['10000000',
+        Joonebitid=['11110000','11111000','11100000',
+        '10000000',
         '11000000',
         '01000000',
         '01100000',
         '00100000',
         '00110000',
+        
         '00010000',
         '00011000',
         '00001000',
+        
         '00001100',
         '00000100',
         '00000110',
         '00000010',
         '00000011',
-        '00000001']
+        '00000001',
 
+        '00000111',
+        '00011111',
+        '00001111']
+
+        Suund= [
+        '00011001',
+        '00011011',
+        '00001011',
+        '00001001',
+        '00110010',
+        '00110110'
+        ]
+
+
+
+
+        prev_bits=[]
+        
         prev_error=0
         prev_int=0
         error=0
         PID_Time_Last=self.sec+1
         PID_STRT=True
-
+        
 
         
         P=0
         I=0
         D=0
-
+        index=0
         
 
         while not rospy.is_shutdown():
+            #==============LINE DETECTOR======================
             read = SMBus(1).read_byte_data(0x3e, 0x11)
             
-            
 
-
-            #Encoder Zeroing
+            #================Encoder Zeroing===================
             if (self.L_encoder>0 or self.R_encoder>0) and flag == 0:
                 Display_L_en=self.L_encoder-Save_L_en
                 Display_R_en=self.R_encoder-Save_R_en
@@ -130,50 +153,99 @@ class ROSPROG(DTROS):
                 Save_R_en = self.R_encoder
                 flag = 0
  
-
+            #========LINE DETECTOR DEC TO BIN==========
             bits_block=bin(read)[2:]
             leading_zeros = 8 - len(bits_block)
             bits = leading_zeros*'0' + bits_block
+            
+            
+                
+            Kp, Ki, Kd ,v_0 = rospy.get_param("/v_pid")
+            #==========LIST TO INDEX===================
             if bits in Joonebitid:
-                index = Joonebitid.index(bits)
-                print(index)
+                index = 20 - Joonebitid.index(bits)
+                
+            #==========PID PIT MODE=====================    
                 PID_STRT=True
-            elif bits == '11111111' or bits== '00000000':
+            
+            elif bits == '11111111':
                 speed.vel_right=0
                 speed.vel_left=0
-                PID_STRT=False    
+                PID_STRT=False
+            #==========TOF DETECTION=    
+            if self.distance<0.3:
+                speed.vel_right=0
+                speed.vel_left=0
+                PID_STRT=False
+
+            if bits in Suund:
+                print('SUUNA VALIMINE -------------------------')
+                flagtwo=1
+                Sec_save=self.sec
                 
-                        
+            
+            if flagtwo==1 and Sec_save+4 < self.sec:  
+                v_0=0.2
+                if index >11:
+                    index=index/3
+
+                #print(f"Sec save                        :  {str(Sec_save)}")
+                print(index)
+                #print("Sec "+(str(self.sec)))
+                if Sec_save+25 < self.sec:
+                    
+                    flagtwo=0
+
+
+            
+            #==============PID CONTROLLER================
             PID_Time= self.sec
-            #PID
             if PID_STRT ==True and (PID_Time>0) and PID_DELTA!=0:
-                Kp, Ki, Kd ,v_0 = rospy.get_param("/v_pid")
-                #0.003 #
-                error= 7 - index
+                
+                if bits=='00111100':
+                    v_0=0.2
+                #errorvalue on 10
+                error= 10 - index
                 P= error
                 I=prev_int+(PID_DELTA*error)
-                I = max(min(I,0.5),-0.5)
+                I = max(min(I,1.0),-1.0)
                 D=((error-prev_error)/PID_DELTA)
                 PID= Kp*P+Ki*I+Kd*D
-                print(f'SEE ON ERROR : {error},    PREVIOUS INT : {prev_int}')
-                print(f'PID:{PID},       TIME: {PID_Time} ,              LAST_TIME: {PID_Time_Last} ')
-                
-                
+                #print(f'SEE ON ERROR : {error},    PREVIOUS INT : {prev_int}')
+                #print(f'PID:{PID},       TIME: {PID_Time} ,              LAST_TIME: {PID_Time_Last} ')
                 speed.vel_right=v_0+PID
                 speed.vel_left=v_0-PID
-                print(f'RIGHT: {v_0+PID},    LEFT : {v_0-PID}')
-                print("=========================================================")
-                print(bits)
-            
-            
+                #print(PID)
+                
+
+
+                if len(prev_bits)<=7:
+                    prev_bits.append(bits)
+                else:
+                    prev_bits.pop(0)
+                    prev_bits.append(bits)
+                #print(f'RIGHT: {v_0+PID},    LEFT : {v_0-PID}')
+            #print("=========================================================")
+                
+                
+            print(f'PREVIOUS BIT :')
+            for i in prev_bits:
+                print(i)
+                
+                
+
+            #=======PID PREVIOUS VALUES=================
             PID_DELTA= PID_Time-PID_Time_Last
-            
             PID_Time_Last=PID_Time
             prev_int=I
             prev_error=error
 
-        
            
+
+
+
+
+           #==================ODOMEETRIA ARVUTUSKÄIK====================
             L_Rotation= Display_L_en * ((2*np.pi)/N_tot)
             #print(f"The left wheel rotated: {L_Rotation} degrees")
 
@@ -198,8 +270,8 @@ class ROSPROG(DTROS):
             Delta_y=Delta_A*np.sin(Delta_null)
             #print(f"Delta Y:================= {round(Delta_y,2)} ================")
 
-            #print("Sec "+(str(self.sec)))
-            #print(f"Sec save                        :  {str(Sec_save)}")
+            
+            
             #print("LAST R ENCODER: "+(str(Last_R_encoder)))
             #print("LAST L ENCODER: "+(str(N_tot)))
             #print("Save Left Degrees                 : "+(str(Save_L_deg)))
@@ -211,6 +283,7 @@ class ROSPROG(DTROS):
             #print(self.L_encoder)
             #print("ToF Distance: "+(str(self.distance)))
             #print("Joon"+(str(read)))
+            
             self.pub.publish(speed)
             rate.sleep()
 
