@@ -58,6 +58,7 @@ class ROSPROG(DTROS):
 
 
     def run(self):
+        #MUUTUJAD
         rate = rospy.Rate(50)
         flag=1
         flagtwo=0
@@ -67,12 +68,8 @@ class ROSPROG(DTROS):
         Save_R_en=0
         Display_L_en=0
         Display_R_en=0
-
         Sec_save=0
-  
-
         Dst_Save=0
-        
         R_Distance=0
         L_Distance=0
         Save_R_deg=0
@@ -82,12 +79,25 @@ class ROSPROG(DTROS):
         N_tot= 135
         R=0.03424
         baseline_wheel2wheel= 0.1
-        
         Delta_null=0
         Delta_A=0
         Back2L= baseline_wheel2wheel
         Delta_x=0
         Delta_y=0
+        prev_bits=[]
+#####################        
+        prev_error=0
+        prev_int=0
+        error=0
+        PID_Time_Last=self.sec+1
+        PID_STRT=True
+        P=0
+        I=0
+        D=0
+        index=0
+        tmp = []
+
+#######################
         Joonebitid=['11110000','11111000','11100000',
         '10000000',
         '11000000',
@@ -111,33 +121,57 @@ class ROSPROG(DTROS):
         '00011111',
         '00001111']
 
-        Suund= [
-        '00011001',
+        Suund = [
+        '10011100',
+        '00010010',
         '00011011',
-        '00001011',
+        '00011001',
+        '10001100',
+        '00110110',
+        '10110000',
+        '10010000',
+        '10111000',
+        '10011000',
+        '00001101',
         '00001001',
         '00110010',
-        '00110110'
+        '00010011',
+        '11011000',
+        '00110001',
+        '01100100',
+        '00100100',
+        '00011010',
         ]
-
-
-
-
-        prev_bits=[]
+        Haru=[
+        '01100110',
+        '00110110',
+        '01100100',
+        '11100110',
+        '01100111',
+        '01110110',
+        '01101110',
+        '01101100',
+        '01001110',
+        '11000110',
+        '01100011',
+        '11001110',
+        '11101100',
+        '11101000',
+        '00010111',
+        '00110111',
+        '00100111', 
+        '00010011',
+        '00001001',
+        '11001100',
+        '00110011',
+        '01000001',
+        '10000010',
+        '01001100',
+        '00100110',
+        '01100010'   
+        ]
         
-        prev_error=0
-        prev_int=0
-        error=0
-        PID_Time_Last=self.sec+1
-        PID_STRT=True
-        
-
-        
-        P=0
-        I=0
-        D=0
-        index=0
-        
+    
 
         while not rospy.is_shutdown():
             #==============LINE DETECTOR======================
@@ -158,53 +192,50 @@ class ROSPROG(DTROS):
             leading_zeros = 8 - len(bits_block)
             bits = leading_zeros*'0' + bits_block
             
+
             
-                
+            #==========PID PARAMEETRID================    
             Kp, Ki, Kd ,v_0 = rospy.get_param("/v_pid")
             #==========LIST TO INDEX===================
             if bits in Joonebitid:
                 index = 20 - Joonebitid.index(bits)
-                
-            #==========PID PIT MODE=====================    
                 PID_STRT=True
-            
+            #==========ROBOT PIT MODE=====================    
             elif bits == '11111111':
                 speed.vel_right=0
                 speed.vel_left=0
                 PID_STRT=False
-            #==========TOF DETECTION=    
+            #==========TOF DETECTION=======================  
             if self.distance<0.3:
                 speed.vel_right=0
                 speed.vel_left=0
                 PID_STRT=False
-
+            #==========RISTMIKU VALIMINE====================
             if bits in Suund:
-                print('SUUNA VALIMINE -------------------------')
+                #print('SUUNA VALIMINE -------------------------')
                 flagtwo=1
                 Sec_save=self.sec
-                
             
-            if flagtwo==1 and Sec_save+4 < self.sec:  
+            if flagtwo==1 and Sec_save+10 < self.sec:  
                 v_0=0.2
-                if index >11:
-                    index=index/3
-
+                if (bits in Haru) or (bits in Suund):
+                    speed.vel_right=0.1
+                    speed.vel_left=-0.1
+                    Sec_save=self.sec
+                    PID_STRT=0
                 #print(f"Sec save                        :  {str(Sec_save)}")
-                print(index)
+                #print(index)
                 #print("Sec "+(str(self.sec)))
-                if Sec_save+25 < self.sec:
-                    
+                if Sec_save+30 < self.sec:
                     flagtwo=0
 
-
-            
-            #==============PID CONTROLLER================
+#==============PID CONTROLLER==============================================================
             PID_Time= self.sec
             if PID_STRT ==True and (PID_Time>0) and PID_DELTA!=0:
-                
+                #KIIRUSE VÄHENDAMINE KUI ON LAI JOON
                 if bits=='00111100':
                     v_0=0.2
-                #errorvalue on 10
+
                 error= 10 - index
                 P= error
                 I=prev_int+(PID_DELTA*error)
@@ -212,13 +243,12 @@ class ROSPROG(DTROS):
                 D=((error-prev_error)/PID_DELTA)
                 PID= Kp*P+Ki*I+Kd*D
                 #print(f'SEE ON ERROR : {error},    PREVIOUS INT : {prev_int}')
-                #print(f'PID:{PID},       TIME: {PID_Time} ,              LAST_TIME: {PID_Time_Last} ')
+                #print(f'PID:{PID},       TIME: {PID_Time} ,  LAST_TIME: {PID_Time_Last} ')
                 speed.vel_right=v_0+PID
                 speed.vel_left=v_0-PID
                 #print(PID)
-                
-
-
+            
+                #=========JOONELUGEJA VÄÄRTUSTE SALVESTAMINE===================
                 if len(prev_bits)<=7:
                     prev_bits.append(bits)
                 else:
@@ -226,24 +256,17 @@ class ROSPROG(DTROS):
                     prev_bits.append(bits)
                 #print(f'RIGHT: {v_0+PID},    LEFT : {v_0-PID}')
             #print("=========================================================")
-                
-                
+#============================================================================================     
+            #============SALVESTATUD VÄÄRTUSTE VÄLJA PRINTIMINE
             print(f'PREVIOUS BIT :')
             for i in prev_bits:
                 print(i)
                 
-                
-
             #=======PID PREVIOUS VALUES=================
             PID_DELTA= PID_Time-PID_Time_Last
             PID_Time_Last=PID_Time
             prev_int=I
             prev_error=error
-
-           
-
-
-
 
            #==================ODOMEETRIA ARVUTUSKÄIK====================
             L_Rotation= Display_L_en * ((2*np.pi)/N_tot)
@@ -271,7 +294,7 @@ class ROSPROG(DTROS):
             #print(f"Delta Y:================= {round(Delta_y,2)} ================")
 
             
-            
+            #==========================VÄÄRTUSTE VÄLJA PRINTIMINE================================
             #print("LAST R ENCODER: "+(str(Last_R_encoder)))
             #print("LAST L ENCODER: "+(str(N_tot)))
             #print("Save Left Degrees                 : "+(str(Save_L_deg)))
@@ -284,6 +307,7 @@ class ROSPROG(DTROS):
             #print("ToF Distance: "+(str(self.distance)))
             #print("Joon"+(str(read)))
             
+
             self.pub.publish(speed)
             rate.sleep()
 
