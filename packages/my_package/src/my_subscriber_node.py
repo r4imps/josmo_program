@@ -16,16 +16,17 @@ class MySubscriberNode(DTROS):
         # initialize the DTROS parent class
         super(MySubscriberNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         # construct publisher
-        self.sub = rospy.Subscriber('sparkfun_line_array', String, self.callback)
-
+        
 
     def run(self, data):
         rate = rospy.Rate(20)
         while not rospy.is_shutdown():
-            lanereader_value = SMBus(1).read_byte(0x3e, 0x11)
+            read = SMBus(1).read_byte(0x3e, 0x11)
 
-            rospy.loginfo(f"Lanereader: {lanereader_value}"
-            self.sub.publish(str(lanereader_value))
+            bits_block=bin(read)[2:]
+            leading_zeros = 8 - len(bits_block)
+            bits = leading_zeros*'0' + bits_block
+            self.sub.publish(str(bits))
 
 
 
