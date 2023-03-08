@@ -1,55 +1,47 @@
-from my_publisher_node import Joonebitid, bits, Suund
-from my_subscriber_node import speed, pub
+import time
+import rospy
+from Biti_Vabriks import *
 
-#==========PID PARAMEETRID================    
-Kp, Ki, Kd ,v_0 = rospy.get_param("/v_pid")
-#==========LIST TO INDEX===================
-if bits in Joonebitid:
+import numpy as np
+
+# Heading control
+# Do not change the name of the function, inputs or outputs. It will break things.
+
+def PIDController(bits , prev_e, prev_int, delta_t): #add theta_ref as input
+    """
+    Args:
+        v_0 (:double:) linear Duckiebot speed (given).
+        theta_ref (:double:) reference heading pose
+        theta_hat (:double:) the current estiamted theta.
+        prev_e (:double:) tracking error at previous iteration.
+        prev_int (:double:) previous integral error term.
+        delta_t (:double:) time interval since last call.
+    returns:
+        v_0 (:double:) linear velocity of the Duckiebot 
+        omega (:double:) angular velocity of the Duckiebot
+        e (:double:) current tracking error (automatically becomes prev_e_y at next iteration).
+        e_int (:double:) current integral error (automatically becomes prev_int_y at next iteration).
+    """
     index = 20 - Joonebitid.index(bits)
-    PID_STRT=True
-#==========ROBOT PIT MODE=====================    
-elif bits == '11111111':
-    speed.vel_right=0
-    speed.vel_left=0
-    PID_STRT=False
-#==========TOF DETECTION=======================  
-if self.distance<0.3:
-    speed.vel_right=0
-    speed.vel_left=0
-    PID_STRT=False
-#==========RISTMIKU VALIMINE====================
-if bits in Suund:
-    #print('SUUNA VALIMINE -------------------------')
-    flagtwo=1
-    Sec_save=self.sec
 
-if flagtwo==1 and Sec_save+10 < self.sec:  
-    v_0=0.2
-    if (bits in Haru) or (bits in Suund):
-        speed.vel_right=0.1
-        speed.vel_left=-0.1
-        Sec_save=self.sec
-        PID_STRT=0
-    #print(f"Sec save                        :  {str(Sec_save)}")
-    #print(index)
-    #print("Sec "+(str(self.sec)))
-    if Sec_save+30 < self.sec:
-        flagtwo=0
+    # Tracking error
+    e = 10 - index
 
-#==============PID CONTROLLER==============================================================
-PID_Time= self.sec
-if PID_STRT ==True and (PID_Time>0) and PID_DELTA!=0:
-    #KIIRUSE VÄHENDAMINE KUI ON LAI JOON
-    if bits=='00111100':
-        v_0=0.2
+    # integral of the error
+    e_int = prev_int + e*delta_t
 
-    error= 10 - index
-    P= error
-    I=prev_int+(PID_DELTA*error)
-    I = max(min(I,1.0),-1.0)
-    D=((error-prev_error)/PID_DELTA)
-    PID= Kp*P+Ki*I+Kd*D
-    #print(f'SEE ON ERROR : {error},    PREVIOUS INT : {prev_int}')
-    #print(f'PID:{PID},       TIME: {PID_Time} ,  LAST_TIME: {PID_Time_Last} ')
-    speed.vel_right=v_0+PID
-    speed.vel_left=v_0-PID
+    # anti-windup - preventing the integral error from growing too much
+    e_int = max(min(e_int,1.0),-1.0)
+
+    # derivative of the error
+    e_der = (e - prev_e)/delta_t
+
+    # controller coefficients
+    Kp, Ki, Kd ,v_0 = rospy.get_param("/v_pid")
+
+    # PID controller for omega
+    omega = Kp*e + Ki*e_int + Kd*e_der
+    
+    #print(f"\n\nDelta time : {delta_t} \nE : {np.rad2deg(e)} \nE int : {e_int} \nPrev e : {prev_e} \nU : {u} \nTheta hat: {np.rad2deg(theta_hat)} \n")
+    
+    return v_0, omega, e, e_int

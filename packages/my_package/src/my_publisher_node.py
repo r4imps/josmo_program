@@ -16,20 +16,14 @@ class ROSPROG(DTROS):
 
         # initialize the DTROS parent class
         super(ROSPROG, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
+
         # SUBSCRIBERID JA PUBLISHERID
-        self.pub = rospy.Publisher('/josmo/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=10)
+        rospy.Publisher('/josmo/line_reader/data', String, )
 
         rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback)
 
         rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
         rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
-        
-
-        
-        self.distance=1.0
-        self.R_encoder=0
-        self.L_encoder=0
-        self.sec=0
         
 
     def callback(self, data):
