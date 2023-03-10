@@ -1,12 +1,13 @@
+#!/usr/bin/env python3
 import rospy
-from Biti_Vabriks import *
+from Biti_Vabriks import Joonebitid
 
 import numpy as np
 
 # Heading control
 # Do not change the name of the function, inputs or outputs. It will break things.
 
-def PIDController(bits , prev_e, prev_int, delta_t): #add theta_ref as input
+def PIDController(bits, prev_e, prev_int, delta_t): #add theta_ref as input
     """
     Args:
         v_0 (:double:) linear Duckiebot speed (given).

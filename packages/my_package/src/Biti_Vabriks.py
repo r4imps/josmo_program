@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 Joonebitid=[
 '11111000',
 '11110000',

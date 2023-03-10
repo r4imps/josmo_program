@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from duckietown.dtros import DTROS, NodeType
 from std_msgs.msg import String
 import rospy
@@ -20,6 +21,6 @@ class ROSPROG(DTROS):
             self.pub.publish(bits)
 
 if __name__ == '__main__':
-    node = ROSPROG(node_name= '/josmo/line_reader/data')
+    node = ROSPROG(node_name= 'line_reader')
     node.run()
     rospy.spin()

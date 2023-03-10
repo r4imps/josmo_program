@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rospy
 from duckietown.dtros import DTROS, NodeType
 from duckietown_msgs.msg import WheelsCmdStamped
@@ -21,6 +22,9 @@ class STRONK(DTROS):
         self.last_time = 1.0
         self.prev_e = 0.0
         self.prev_int = 0.0
+
+        self.distance = 0.0
+        self.bits = ""
 
     
     def callback(self, data):
@@ -69,6 +73,7 @@ class STRONK(DTROS):
                 self.prev_bits.append(self.bits)
 
 if __name__ == '__main__':
-    STRONK.run()
+    node = STRONK(node_name='stronk_node')
+    node.run()
     rospy.on_shutdown(STRONK.on_shutdown)
     rospy.spin()
