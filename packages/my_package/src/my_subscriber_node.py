@@ -3,8 +3,8 @@
 import os
 import rospy
 from duckietown.dtros import DTROS, NodeType
-from std_msgs.msg import String
 
+from duckietown_msgs.msg import WheelEncoderStamped
 from sensor_msgs.msg import Range
 
 from smbus2 import SMBus
@@ -16,7 +16,29 @@ class MySubscriberNode(DTROS):
         # initialize the DTROS parent class
         super(MySubscriberNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         # construct publisher
+        rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback)
+
+        rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
+        rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
+
+        self.distance=1.0
+        self.R_encoder=0
+        self.L_encoder=0
+        self.sec=0
+
         
+    def callback(self, data):
+        
+        self.distance = data.range
+
+
+    def Callback_R_Encoder(self,data):
+        self.R_encoder = data.data
+        self.sec= data.header.seq
+
+
+    def Callback_L_Encoder(self,data):
+        self.L_encoder = data.data
 
     def run(self, data):
         rate = rospy.Rate(20)

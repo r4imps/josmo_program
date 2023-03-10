@@ -1,4 +1,3 @@
-import time
 import rospy
 from Biti_Vabriks import *
 
