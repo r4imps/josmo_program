@@ -63,6 +63,7 @@ class STRONK(DTROS):
                 speed.vel_right = 0.0
                 speed.vel_left = 0.0
                 self.pub.publish(speed)
+                print(f'Obstruction')
             
                             ############### 8X8 log ################
 
@@ -71,6 +72,9 @@ class STRONK(DTROS):
             else:
                 self.prev_bits.pop(0)
                 self.prev_bits.append(self.bits)
+            print(f'PREVIOUS BIT :')
+            for i in self.prev_bits:
+                print(i)
 
 if __name__ == '__main__':
     node = STRONK(node_name='stronk_node')
