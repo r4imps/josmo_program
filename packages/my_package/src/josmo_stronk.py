@@ -17,9 +17,10 @@ class STRONK(DTROS):
         rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback_ToF)
 
         self.prev_bits = []
-        self.sec = time.time
+        self.sec = time.time()
+        self.last_time = 0.0
+        self.delta_t = 0.0
 
-        self.last_time = 1.0
         self.prev_e = 0.0
         self.prev_int = 0.0
 
@@ -45,25 +46,35 @@ class STRONK(DTROS):
 
             if self.distance < 0.3:
                 obstruction = True
-            elif self.distance > 0.5 and self.bits == "11111111":
-                obstruction = False
-            else:
+            elif self.distance > 0.8 and self.bits == "11111111":
                 obstruction = None
+            else:
+                obstruction = False
 
 ######################################      Move             ###################################
 
-            if obstruction == None:
+            if obstruction == False:
                 self.delta_t = self.sec - self.last_time
+                if self.delta_t > 0.3 or self.delta_t == 0.0:
+                    self.delta_t = 0.0001
                 v_0, omega, self.prev_e, self.prev_int = PIDController(self.bits, self.prev_e, self.prev_int, self.delta_t)
                 self.last_time = self.sec
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
                 self.pub.publish(speed)
-            else:
+
+            elif obstruction == True:
                 speed.vel_right = 0.0
                 speed.vel_left = 0.0
                 self.pub.publish(speed)
                 print(f'Obstruction')
+                
+            else:
+                speed.vel_right = 0.0
+                speed.vel_left = 0.0
+                self.pub.publish(speed)
+                print(f'PIT MODE')
+                
             
                             ############### 8X8 log ################
 
@@ -72,7 +83,8 @@ class STRONK(DTROS):
             else:
                 self.prev_bits.pop(0)
                 self.prev_bits.append(self.bits)
-            print(f'PREVIOUS BIT :')
+            print(f'PREVIOUS BITS :         Delta_t:  {self.delta_t}         Time:{self.sec}  Last_time:{self.last_time}')
+            
             for i in self.prev_bits:
                 print(i)
 

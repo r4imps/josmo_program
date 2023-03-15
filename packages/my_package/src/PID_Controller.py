@@ -22,8 +22,10 @@ def PIDController(bits, prev_e, prev_int, delta_t): #add theta_ref as input
         e (:double:) current tracking error (automatically becomes prev_e_y at next iteration).
         e_int (:double:) current integral error (automatically becomes prev_int_y at next iteration).
     """
-    index = 20 - Joonebitid.index(bits)
-
+    if bits in Joonebitid:
+        index = 20 - Joonebitid.index(bits)
+    else:
+        index = 10
     # Tracking error
     e = 10 - index
 
