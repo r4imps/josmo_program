@@ -8,7 +8,11 @@ from duckietown_msgs.msg import WheelsCmdStamped, WheelEncoderStamped
 from sensor_msgs.msg import Range
 import time
 from datetime import datetime
-from smbus2 import SMBus
+
+
+
+
+
 speed = WheelsCmdStamped()
 
 
@@ -23,32 +27,48 @@ class ROSPROG(DTROS):
         super(ROSPROG, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         # SUBSCRIBERID JA PUBLISHERID
         self.pub = rospy.Publisher('/josmo/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=10)
+
         rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback)
+
         rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
         rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
+        
 
+        
         self.distance=1.0
         self.R_encoder=0
         self.L_encoder=0
         self.sec=0
-        rospy.set_param('/v_pid', [0.056 , 0.15 , 0.3 ,0.4])
+        
 
     def callback(self, data):
+        
         self.distance = data.range
+
+
     def Callback_R_Encoder(self,data):
         self.R_encoder = data.data
         self.sec= data.header.seq
+
+
     def Callback_L_Encoder(self,data):
         self.L_encoder = data.data
+
     def on_shutdown(self):
+        rospy.on_shutdown(self.shutdown)
+    def shutdown(self):
         speed.vel_left = 0
         speed.vel_right = 0
         Save_L_en=0
         Save_R_en=0
         self.pub.publish(speed)
         rospy.on_shutdown()
+    
+      
+
 
     def run(self):
+
         #MUUTUJAD
         rate = rospy.Rate(50)
         flag=1
@@ -89,28 +109,28 @@ class ROSPROG(DTROS):
         tmp = []
 
 #######################
-        Joonebitid=['11110000','11111000','11100000',
+        Joonebitid=[
+        '11111000',
+        '11110000',
+        '11100000',
         '10000000',
         '11000000',
         '01000000',
         '01100000',
         '00100000',
         '00110000',
-        
         '00010000',
         '00011000',
-        '00001000',
-        
+        '00001000',        
         '00001100',
         '00000100',
         '00000110',
         '00000010',
         '00000011',
         '00000001',
-
         '00000111',
-        '00011111',
-        '00001111']
+        '00001111',
+        '00011111']
 
         Suund = [
         '10011100',
@@ -134,8 +154,8 @@ class ROSPROG(DTROS):
         '00011010',
         ]
         Haru=[
-        '11100111',
-        '11000011',
+        '01100110',
+        '00110110',
         '01100100',
         '11100110',
         '01100111',
@@ -168,6 +188,7 @@ class ROSPROG(DTROS):
             #==============LINE DETECTOR======================
             read = SMBus(1).read_byte_data(0x3e, 0x11)
             
+
             #================Encoder Zeroing===================
             if (self.L_encoder>0 or self.R_encoder>0) and flag == 0:
                 Display_L_en=self.L_encoder-Save_L_en
@@ -200,7 +221,7 @@ class ROSPROG(DTROS):
                 speed.vel_right=0
                 speed.vel_left=0
                 PID_STRT=False
-            #==========SHORT PATH====================
+            #==========RISTMIKU VALIMINE====================
             if bits in Suund:
                 #print('SUUNA VALIMINE -------------------------')
                 flagtwo=1
@@ -219,7 +240,7 @@ class ROSPROG(DTROS):
                 if Sec_save+30 < self.sec:
                     flagtwo=0
 
-            #==============PID CONTROLLER==============================================================
+#==============PID CONTROLLER==============================================================
             PID_Time= self.sec
             if PID_STRT ==True and (PID_Time>0) and PID_DELTA!=0:
                 #KIIRUSE VÄHENDAMINE KUI ON LAI JOON
@@ -246,8 +267,8 @@ class ROSPROG(DTROS):
                     prev_bits.append(bits)
                 #print(f'RIGHT: {v_0+PID},    LEFT : {v_0-PID}')
             #print("=========================================================")
-            #============================================================================================     
-            #============ 0_0
+#============================================================================================     
+            #============SALVESTATUD VÄÄRTUSTE VÄLJA PRINTIMINE
             print(f'PREVIOUS BIT :')
             for i in prev_bits:
                 print(i)
@@ -258,7 +279,7 @@ class ROSPROG(DTROS):
             prev_int=I
             prev_error=error
 
-           #==================ODOMETRY====================
+           #==================ODOMEETRIA ARVUTUSKÄIK====================
             L_Rotation= Display_L_en * ((2*np.pi)/N_tot)
             #print(f"The left wheel rotated: {L_Rotation} degrees")
 
@@ -297,12 +318,77 @@ class ROSPROG(DTROS):
             #print("ToF Distance: "+(str(self.distance)))
             #print("Joon"+(str(read)))
             
-
             self.pub.publish(speed)
-            rate.sleep()
+
+            rate = rospy.Rate(10)
+            
+            R_Distance=0
+            L_Distance=0
+            
+            N_tot= 135
+            R=0.03424
+            baseline_wheel2wheel= 0.1
+
+
+            while not rospy.is_shutdown():
+                read = SMBus(1).read_byte_data(0x3e, 0x11)
+
+                if self.L_encoder>0 and flag == 1:
+                    Display_L_en=self.L_encoder-Save_L_en
+
+                
+                elif flag == 0 and self.L_encoder > 0:
+                    Save_L_en = self.L_encoder
+                    flag = 1
+                                                                #rataste encoderite nullimine
+                else:
+                    continue
+
+                if self.R_encoder>0 and flag == 1:
+                    Display_R_en=self.R_encoder-Save_R_en
+
+                
+                elif flag == 0 and self.R_encoder > 0:
+                    Save_R_en = self.R_encoder
+                    flag = 1
+
+                else:
+                    continue
+                
+                L_Rotation= self.L_encoder * ((2*np.pi)/N_tot)
+                print(f"The left wheel rotated: {np.rad2deg(L_Rotation)} degrees")
+                R_Rotation= self.R_encoder * ((2*np.pi)/N_tot)
+                print(f"The right wheel rotated: {np.rad2deg(R_Rotation)} degrees")
+                L_Distance= R*L_Rotation
+                print(f"The left wheel travel: {round(L_Distance,3)} meters")
+                R_Distance= R*R_Rotation
+                print(f"The righ wheel travel: {round(R_Distance,3)} meters")
+                Distance= (L_Distance+R_Distance)/2
+                # encoder value
+                print(f"Distance traveled: {round(Distance ,3)} meters")
+
+                
+
+
+            
+                #print("SO---"+(str(so)))
+                #print("LAST R ENCODER: "+(str(Last_R_encoder)))
+                #print("LAST L ENCODER: "+(str(N_tot)))
+                #print("SAVE R: "+(str(Save_R_en)))
+                #print("SAVE L: "+(str(Save_L_en)))
+                print("DISPLAY L ENCODER: "+(str(Display_L_en)))
+                print("DISPLAY R ENCODER: "+(str(Display_R_en)))
+                #print(self.R_encoder)
+                #print(self.L_encoder)
+                #print("ToF Distance: "+(str(self.distance)))
+                print("Joon"+(str(read)))
+                self.pub.publish(speed)
+
+
 
 if __name__ == '__main__':
     node = ROSPROG(node_name='my_publisher_node')
     node.run()
+    rospy.spin()
     rospy.on_shutdown(ROSPROG.on_shutdown)
     rospy.spin()
