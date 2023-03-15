@@ -13,8 +13,11 @@ dt-launchfile-init
 
 # launching app
 #roslaunch my_package multiple_nodes.launch veh:=$VEHICLE_NAME
-dt-exec rosrun my_package my_publisher_node.py
-dt-exec rosrun my_package my_subscriber_node.py
+dt-exec rosrun my_package my_publisher_node.py 
+dt-exec rosrun my_package my_subscriber_node.py 
+dt-exec rosrun my_package ob_detect.py
+dt-exec rosrun my_package line_value.py
+dt-exec rosrun my_package josmo_stronk.py
 
 # ----------------------------------------------------------------------------
 # YOUR CODE ABOVE THIS LINE
