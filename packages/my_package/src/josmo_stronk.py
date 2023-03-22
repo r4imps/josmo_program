@@ -6,6 +6,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Range
 from PID_Controller import PIDController
 import time
+from smbus2 import SMBus
 
 speed = WheelsCmdStamped()
 
@@ -17,7 +18,7 @@ class STRONK(DTROS):
         rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback_ToF)
 
         self.prev_bits = []
-        self.sec = time.time()
+        self.sec = 0.1
         self.last_time = 0.0
         self.delta_t = 0.0
 
@@ -41,12 +42,17 @@ class STRONK(DTROS):
         rospy.on_shutdown()
 
     def run(self):
+        rate = rospy.Rate(20)
+
         while not rospy.is_shutdown():
+
+            self.sec = time.time()
+
 ######################################      Obstruction      ###################################
 
             if self.distance < 0.3:
                 obstruction = True
-            elif self.distance > 0.8 and self.bits == "11111111":
+            elif self.bits == "11111111":
                 obstruction = None
             else:
                 obstruction = False
@@ -55,10 +61,9 @@ class STRONK(DTROS):
 
             if obstruction == False:
                 self.delta_t = self.sec - self.last_time
-                if self.delta_t > 0.3 or self.delta_t == 0.0:
-                    self.delta_t = 0.0001
+                if self.delta_t > 0.008 or self.delta_t == 0.0:
+                    self.delta_t = 0.0078
                 v_0, omega, self.prev_e, self.prev_int = PIDController(self.bits, self.prev_e, self.prev_int, self.delta_t)
-                self.last_time = self.sec
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
                 self.pub.publish(speed)
@@ -74,7 +79,10 @@ class STRONK(DTROS):
                 speed.vel_left = 0.0
                 self.pub.publish(speed)
                 print(f'PIT MODE')
-                
+            
+            rate.sleep()
+
+            self.last_time = self.sec
             
                             ############### 8X8 log ################
 
@@ -83,6 +91,7 @@ class STRONK(DTROS):
             else:
                 self.prev_bits.pop(0)
                 self.prev_bits.append(self.bits)
+
             print(f'PREVIOUS BITS :         Delta_t:  {self.delta_t}         Time:{self.sec}  Last_time:{self.last_time}')
             
             for i in self.prev_bits:

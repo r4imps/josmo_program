@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 import rospy
-from Biti_Vabriks import Joonebitid
-
-import numpy as np
+from Biti_Vabriks import *
 
 # Heading control
 # Do not change the name of the function, inputs or outputs. It will break things.
@@ -24,6 +22,17 @@ def PIDController(bits, prev_e, prev_int, delta_t): #add theta_ref as input
     """
     if bits in Joonebitid:
         index = 20 - Joonebitid.index(bits)
+    elif bits in Haru:
+        n= 0
+        tmp = ''
+        for el in bits:
+            tmp += el
+            if el == '1':
+                n += 1
+            if n== 2:
+                bits = '0' * (8 - len(tmp)) + tmp
+                index = 20 - Joonebitid.index(bits)
+                break
     else:
         index = 10
     # Tracking error
