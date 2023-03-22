@@ -20,11 +20,53 @@ class MySubscriberNode(DTROS):
         #rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
         #rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
         # construct publisher
-        self.sub = rospy.Subscriber('sparkfun_line_array', String, self.callback)
+        rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback)
 
-    def callback(self, data):
-        rospy.loginfo("I heard %s", data.data)
+        rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
+        rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
+
+        self.distance=1.0
+        self.R_encoder=0
+        self.L_encoder=0
+        self.sec=0
+
         
+    def callback(self, data):
+        
+        self.distance = data.range
+
+
+    def Callback_R_Encoder(self,data):
+        self.R_encoder = data.data
+        self.sec= data.header.seq
+
+
+    def Callback_L_Encoder(self,data):
+        self.L_encoder = data.data
+
+    def run(self, data):
+        rate = rospy.Rate(20)
+        while not rospy.is_shutdown():
+            read = SMBus(1).read_byte(0x3e, 0x11)
+
+            bits_block=bin(read)[2:]
+            leading_zeros = 8 - len(bits_block)
+            bits = leading_zeros*'0' + bits_block
+            self.sub.publish(str(bits))
+
+
+
+    def run(self, data):
+        rate = rospy.Rate(20)
+        while not rospy.is_shutdown():
+            read = SMBus(1).read_byte(0x3e, 0x11)
+
+            bits_block=bin(read)[2:]
+            leading_zeros = 8 - len(bits_block)
+            bits = leading_zeros*'0' + bits_block
+            self.sub.publish(str(bits))
+
+
 
     def run(self, data):
         rate = rospy.Rate(20)
