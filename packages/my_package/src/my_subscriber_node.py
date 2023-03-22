@@ -17,8 +17,8 @@ class MySubscriberNode(DTROS):
         super(MySubscriberNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         
         
-        rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
-        rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
+        #rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
+        #rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
         # construct publisher
         self.sub = rospy.Subscriber('sparkfun_line_array', String, self.callback)
 

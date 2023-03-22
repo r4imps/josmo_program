@@ -45,11 +45,9 @@ class ROSPROG(DTROS):
         
         self.distance = data.range
 
-
     def Callback_R_Encoder(self,data):
         self.R_encoder = data.data
         self.sec= data.header.seq
-
 
     def Callback_L_Encoder(self,data):
         self.L_encoder = data.data
