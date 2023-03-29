@@ -6,7 +6,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Range
 from PID_Controller import PIDController
 import time
-from smbus2 import SMBus
+from AvoidObstacle import AvoidObstacle
 
 speed = WheelsCmdStamped()
 
@@ -50,8 +50,12 @@ class STRONK(DTROS):
 
 ######################################      Obstruction      ###################################
 
-            if self.distance < 0.3:
+            if self.distance < 0.4:
                 obstruction = True
+                speed.vel_right = 0.0
+                speed.vel_left = 0.0
+                self.pub.publish(speed)
+
             elif self.bits == "11111111":
                 obstruction = None
             else:
@@ -61,18 +65,14 @@ class STRONK(DTROS):
 
             if obstruction == False:
                 self.delta_t = self.sec - self.last_time
-                if self.delta_t > 0.008 or self.delta_t == 0.0:
-                    self.delta_t = 0.0078
                 v_0, omega, self.prev_e, self.prev_int = PIDController(self.bits, self.prev_e, self.prev_int, self.delta_t)
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
                 self.pub.publish(speed)
 
             elif obstruction == True:
-                speed.vel_right = 0.0
-                speed.vel_left = 0.0
-                self.pub.publish(speed)
                 print(f'Obstruction')
+                AvoidObstacle(self.distance)
                 
             else:
                 speed.vel_right = 0.0

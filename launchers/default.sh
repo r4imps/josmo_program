@@ -16,6 +16,7 @@ dt-launchfile-init
 dt-exec rosrun my_package PID_Controller.py
 dt-exec rosrun my_package line_follower.py
 dt-exec rosrun my_package josmo_stronk.py
+dt-exec rosrun my_package led_emitter_node.py
 
 # ----------------------------------------------------------------------------
 # YOUR CODE ABOVE THIS LINE

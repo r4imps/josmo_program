@@ -10,6 +10,7 @@ class ROSPROG(DTROS):
 
         self.pub = rospy.Publisher('/josmo/line_reader/data', String, queue_size = 1)
 
+
     def run(self):
         rate = rospy.Rate(20)
         

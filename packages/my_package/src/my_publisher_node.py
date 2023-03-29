@@ -26,9 +26,7 @@ class ROSPROG(DTROS):
         rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
         
 
-    def callback(self, data):
-        
-        self.distance = data.range
+
 
 
     def Callback_R_Encoder(self,data):
