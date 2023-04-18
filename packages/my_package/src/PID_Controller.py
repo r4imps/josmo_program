@@ -11,6 +11,7 @@ PID_Time_Last=0
 class PID():
     def __init__(self):
         rospy.Subscriber('/line_bits', String, self.line)
+        rospy.set_param("/v_pid", [0.045 ,0.022 ,0.25 ,0.4])
         self.bits=0
     def line(self,data):
         self.bits= data.data
@@ -18,10 +19,9 @@ class PID():
     def PID_STRT(self):
         
         Joonebitid=['10000000',
-        '11000000',
-        '01000000',
-        '01100000',
-        '00100000',
+        '11000000',I=0
+error=0
+prev_int=0
         '00110000',
         '00010000',
         '00011000',
@@ -46,7 +46,7 @@ class PID():
         vel_to_right=0.0
         vel_to_left=0.0
         
-        rospy.set_param("/v_pid", [0.045 ,0.022 ,0.25 ,0.4]) 
+         
         Kp,Ki,Kd,v_0 = rospy.get_param("/v_pid")
         PID_STRT=False
 

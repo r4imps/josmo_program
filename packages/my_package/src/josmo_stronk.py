@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import rospy
+
 from duckietown.dtros import DTROS, NodeType
 from duckietown_msgs.msg import WheelsCmdStamped
 from sensor_msgs.msg import Range
 from std_msgs.msg import String
-from PID_Controller import *
 from odometry import *
 
 
@@ -18,6 +18,15 @@ class STRONK(DTROS):
         self.distance=0
         self.pub = rospy.Publisher('/josmo/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=10)
         self.bits='0'
+        rospy.Subscriber('/line_bits', String, self.line)
+        rospy.set_param("/v_pid", [0.045 ,0.022 ,0.25 ,0.4])
+        self.bits=0
+        self.PID_Time_Last=0
+        self.I=0
+        self.error=0
+        self.prev_int=0
+        self.PID_DELTA=0
+        self.prev_error=0
     
         
 
@@ -36,28 +45,75 @@ class STRONK(DTROS):
 
     def run(self):
         rate = rospy.Rate(20)
-        obj_pid=PID()
+        
         obj= ODOMEETRIA()
-        while not rospy.is_shutdown():
+        while not rospy.is_shutdown():                
             
-            """Val= obj_pid.PID_STRT()
-            if Val!=None:
-                speed.vel_right= Val[0]
-                speed.vel_left= Val[1]"""
-                
-                
             
-            VALUES=obj.ODOMETRY_FUNC()
-            print(VALUES[6], VALUES[7])
-            """if VALUES[6]<2 and VALUES[6]>1:
-               speed.vel_right=0.4
-               speed.vel_left= 0.4
-            elif VALUES[6]>2:
-                speed.vel_right=0.1
-                speed.vel_left= 0.3
-            elif VALUES[6]<1:
-                speed.vel_right=0.3
-                speed.vel_left= 0.1"""
+            def PID_STRT():
+                
+                Joonebitid=['10000000',
+                '11000000',
+                '00110000',
+                '00010000',
+                '00011000',
+                '00001000',
+                '00001100',
+                '00000100',
+                '00000110',
+                '00000010',
+                '00000011',
+                '00000001']
+            #==========PID PARAMEETRID================
+                vel_to_right=0.0
+                vel_to_left=0.0
+                Kp,Ki,Kd,v_0 = rospy.get_param("/v_pid")
+                PID_STRT=False
+                    #==========LIST TO INDEX===================
+                if self.bits in Joonebitid:
+                    index = 12 - Joonebitid.index(self.bits)
+                    print(f'index on: {index}')
+                    PID_STRT=True
+                #==========ROBOT PIT MODE=====================    
+                elif self.bits == '11111111':
+                    vel_to_right=0.0
+                    vel_to_left=0.0
+                    PID_STRT=False
+                    #return [vel_to_right , vel_to_left]
+                    
+                #==============PID CONTROLLER==============================================================
+                PID_Time= time.time()
+               
+
+                
+                if PID_STRT ==True and PID_Time!=0 and self.PID_DELTA!=0 and self.bits!='':
+                    #print("PID ACTIVE")
+                    #KIIRUSE VÄHENDAMINE KUI ON LAI JOON
+                    if self.bits=='00111100':
+                        v_0=0.2
+
+                    self.error= 6 - index
+                    P= self.error
+                    I=self.prev_int+(self.PID_DELTA*self.error)
+                    I = max(min(I,1.0),-1.0)
+                    D=((self.error-self.prev_error)/self.PID_DELTA)
+                    PID= Kp*P+Ki*I+Kd*D
+                    #print(f'SEE ON ERROR : {self.error},    PREVIOUS INT : {self.prev_int}')
+                    #print(f'PID_START{PID_STRT}       TIME: {PID_Time} ,  LAST_TIME: {self.PID_Time_Last} ')
+                    
+                    vel_to_right=v_0+PID
+                    vel_to_left=v_0-PID
+                    if vel_to_left != None and vel_to_right!=None:
+                        #return [vel_to_right , vel_to_left]
+                        pass
+                print(self.bits)
+                self.PID_DELTA= PID_Time-self.PID_Time_Last
+                self.PID_Time_Last=PID_Time
+                self.prev_int=self.I
+                self.prev_error=self.error
+
+            
+                
             
             self.pub.publish(speed)
             rate.sleep()

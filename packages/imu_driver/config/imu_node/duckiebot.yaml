@@ -1,9 +1,9 @@
 # Sensor Configuration
-imu_device_id: "0x71"
+imu_device_id: "0x68"
 polling_hz: 30
 sensor_name: bottom_center
 
 # Calibrations
-ang_vel_offset: [ 0, 0, 0 ]
-accel_offset: [ 0, 0, 0 ]
+ang_vel_offset: [ -0.000947353199565235, -0.0005772569864672543, 0.00033750912515222804 ]
+accel_offset: [ 0.6063387530395643, -0.0311557462036127, 10.322138376843071 ]
 temp_offset: 0
