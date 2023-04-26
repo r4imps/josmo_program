@@ -21,6 +21,7 @@ dt-exec rosrun my_package line_value.py
 dt-exec rosrun my_package josmo_stronk.py
 #dt-exec rosrun my_package LED_Emitter.py
 dt-exec rosrun my_package imu.py
+dt-exec rosrun my_package odometry.py
 
 
 # ----------------------------------------------------------------------------
