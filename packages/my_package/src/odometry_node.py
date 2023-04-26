@@ -43,6 +43,7 @@ class ODOMETRY(DTROS):
         elif self.flag == 1 and (self.L_encoder != 0 or self.R_encoder!=0):
             Save_L_en = self.L_encoder
             Save_R_en = self.R_encoder
+            self.flag = 0
 
         L_Rotation= Display_L_en * ((2*np.pi)/N_tot)
         #print(f"The left wheel rotated: {L_Rotation} degrees")

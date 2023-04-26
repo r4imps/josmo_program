@@ -17,22 +17,13 @@ class STRONK(DTROS):
         rospy.Subscriber('/josmo/line_reader/data', String, self.callback)
         rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback_ToF)
 
-        self.prev_bits = []
-        self.sec = 0.1
-        self.last_time = 0.0
-        self.delta_t = 0.0
-
-        self.prev_e = 0.0
-        self.prev_int = 0.0
-
         self.distance = 0.0
-        self.bits = ""
-
+        self.bits = ''
     
-    def callback(self, data):
+    def callback(self, data) -> str:
         self.bits = data.data
     
-    def callback_ToF(self, data):
+    def callback_ToF(self, data) -> float:
         self.distance = data.range
 
     def on_shutdown(self):
@@ -42,60 +33,54 @@ class STRONK(DTROS):
         rospy.on_shutdown()
 
     def run(self):
-        rate = rospy.Rate(20)
+        rate = rospy.Rate(1000)
+        prev_bits = []
+        last_time = time.time() - 0.002
+        prev_e = 0.0
+        prev_int = 0.0
+
+        flag = False
 
         while not rospy.is_shutdown():
 
-            self.sec = time.time()
-
-######################################      Obstruction      ###################################
-
-            if self.distance < 0.4:
-                obstruction = True
-                speed.vel_right = 0.0
-                speed.vel_left = 0.0
-                self.pub.publish(speed)
-
-            elif self.bits == "11111111":
-                obstruction = None
-            else:
-                obstruction = False
-
 ######################################      Move             ###################################
 
-            if obstruction == False:
-                self.delta_t = self.sec - self.last_time
-                v_0, omega, self.prev_e, self.prev_int = PIDController(self.bits, self.prev_e, self.prev_int, self.delta_t)
+            if 0.4 < self.distance < 10.0 and self.bits != '11111111':
+                delta_t = time.time()- last_time
+                v_0, omega, prev_e, prev_int = PIDController(self.bits, prev_e, prev_int, delta_t, prev_bits)
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
                 self.pub.publish(speed)
+                flag = False
+                                
+                            ############### 8X8 log ################
 
-            elif obstruction == True:
-                print(f'Obstruction')
-                AvoidObstacle(self.distance)
+                if len(prev_bits)<=7:
+                    prev_bits.append(self.bits)
+                else:
+                    prev_bits.pop(0)
+                    prev_bits.append(self.bits)
                 
-            else:
+                for i in prev_bits:
+                    #print(i)
+                    pass
+
+            else:          ############### PIT MODE ####################
                 speed.vel_right = 0.0
                 speed.vel_left = 0.0
                 self.pub.publish(speed)
-                print(f'PIT MODE')
+                delta_t = 0.0
+                if flag == False:
+                    print(f'PIT MODE')
+                    flag = True
+
+                
             
             rate.sleep()
-
-            self.last_time = self.sec
+            last_time = time.time()
+            #print(f'last_time = {last_time}    delta_t = {delta_t}')    
             
-                            ############### 8X8 log ################
 
-            if len(self.prev_bits)<=7:
-                self.prev_bits.append(self.bits)
-            else:
-                self.prev_bits.pop(0)
-                self.prev_bits.append(self.bits)
-
-            print(f'PREVIOUS BITS :         Delta_t:  {self.delta_t}         Time:{self.sec}  Last_time:{self.last_time}')
-            
-            for i in self.prev_bits:
-                print(i)
 
 if __name__ == '__main__':
     node = STRONK(node_name='stronk_node')
