@@ -7,7 +7,6 @@ from sensor_msgs.msg import Range
 from PID_Controller import PIDController
 import time
 from AvoidObstacle import AvoidObstacle
-from Biti_Vabriks import Joonebitid
 
 speed = WheelsCmdStamped()
 
@@ -44,6 +43,12 @@ class STRONK(DTROS):
         avoiding_obstruction = False
 
         while not rospy.is_shutdown():
+            while self.distance == 0.0:
+                rate.sleep()
+                        
+        #roboti käivitamisel peab pisut ootama kuni kõik sensorid käivitatakse,
+        #vastasel juhul saab programm vale andmeid ja hakkab nende põhjal tegema mitte vajalike operatsioone
+
 ######################################      Move             ###################################
 
             if 0.5 < self.distance < 10.0 and self.bits != '11111111' and avoiding_obstruction == False:
@@ -52,9 +57,8 @@ class STRONK(DTROS):
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
                 self.pub.publish(speed)
-                #print(f'vel_right: {v_0 + omega} vel_left: {v_0 + omega} Bits: {self.bits}')
 
-                start_time = time.time()
+                start_time = time.time()  #takistuse tuvastamise aeg
             
             elif self.distance < 0.5 or avoiding_obstruction == True:
                 speed.vel_right, speed.vel_left , avoiding_obstruction = AvoidObstacle(start_time)
@@ -75,10 +79,11 @@ class STRONK(DTROS):
                 prev_bits.pop(0)
                 prev_bits.append(self.bits)
 
-                
+            print(f'vel_right: {speed.vel_right} vel_left: {speed.vel_left} Bits: {self.bits} distance: {self.distance}')
+            
             rate.sleep()
             last_time = time.time()
-            #print(f'last_time = {last_time}    delta_t = {delta_t}')    
+ 
             
 
 
