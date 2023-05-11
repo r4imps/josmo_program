@@ -7,6 +7,7 @@ from sensor_msgs.msg import Range
 from PID_Controller import PIDController
 import time
 from AvoidObstacle import AvoidObstacle
+from Biti_Vabriks import Joonebitid
 
 speed = WheelsCmdStamped()
 
@@ -33,49 +34,48 @@ class STRONK(DTROS):
         rospy.on_shutdown()
 
     def run(self):
-        rate = rospy.Rate(1000)
+        rate = rospy.Rate(20)
         prev_bits = []
         last_time = time.time() - 0.002
         prev_e = 0.0
         prev_int = 0.0
+        start_time = last_time
 
-        flag = False
+        avoiding_obstruction = False
 
         while not rospy.is_shutdown():
-
 ######################################      Move             ###################################
 
-            if 0.4 < self.distance < 10.0 and self.bits != '11111111':
+            if 0.5 < self.distance < 10.0 and self.bits != '11111111' and avoiding_obstruction == False:
                 delta_t = time.time()- last_time
                 v_0, omega, prev_e, prev_int = PIDController(self.bits, prev_e, prev_int, delta_t, prev_bits)
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
                 self.pub.publish(speed)
-                flag = False
-                                
-                            ############### 8X8 log ################
+                #print(f'vel_right: {v_0 + omega} vel_left: {v_0 + omega} Bits: {self.bits}')
 
-                if len(prev_bits)<=7:
-                    prev_bits.append(self.bits)
-                else:
-                    prev_bits.pop(0)
-                    prev_bits.append(self.bits)
-                
-                for i in prev_bits:
-                    #print(i)
-                    pass
+                start_time = time.time()
+            
+            elif self.distance < 0.5 or avoiding_obstruction == True:
+                speed.vel_right, speed.vel_left , avoiding_obstruction = AvoidObstacle(start_time)
+                self.pub.publish(speed)
 
             else:          ############### PIT MODE ####################
                 speed.vel_right = 0.0
                 speed.vel_left = 0.0
                 self.pub.publish(speed)
                 delta_t = 0.0
-                if flag == False:
-                    print(f'PIT MODE')
-                    flag = True
+                print(f'PIT MODE')
+
+                            ############### 8X8 log ################
+
+            if len(prev_bits)<=7:
+                prev_bits.append(self.bits)
+            else:
+                prev_bits.pop(0)
+                prev_bits.append(self.bits)
 
                 
-            
             rate.sleep()
             last_time = time.time()
             #print(f'last_time = {last_time}    delta_t = {delta_t}')    
