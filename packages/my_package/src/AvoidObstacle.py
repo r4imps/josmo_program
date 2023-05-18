@@ -1,6 +1,6 @@
 import time
 import rospy
-
+rospy.set_param("/maxvel", 0.3)
 def AvoidObstacle(start_time):
     v_0 = float(rospy.get_param("/maxvel"))
     avoiding_obstruction = True
