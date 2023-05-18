@@ -1,6 +1,6 @@
 from smbus2 import SMBus
 import rospy
-rospy.set_param("/v_pid", [0.045 ,0.022 ,0.25 ])
+rospy.set_param("/v_pid", [0.068 ,0.012 ,0.22 ])
 
 def get_line_values():
     bus = SMBus(1)

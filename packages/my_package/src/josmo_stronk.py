@@ -6,12 +6,9 @@ from duckietown_msgs.msg import WheelsCmdStamped
 from sensor_msgs.msg import Range
 from std_msgs.msg import String
 from odometry import *
-import PID_Controller 
+import PID_Controller
 
-
-
-
-
+speed = WheelsCmdStamped()
 
 class STRONK(DTROS):
     def __init__(self, node_name):
@@ -21,6 +18,8 @@ class STRONK(DTROS):
         
 
         self.distance=0
+        self.right=[[1,2,3],[1,2,3,4],[1,2,3,4,5],[2,3,4]]
+        self.left=[[6,7,8],[5,6,7,8],[4,5,6,7,8],[7,6,5]]
 
     def callback(self,data):
         self.distance= data.range
@@ -37,11 +36,29 @@ class STRONK(DTROS):
         t0=time.time()
         v_0=0.2
         rate = rospy.Rate(20)
-        
+        flag=2
         while not rospy.is_shutdown():
             #PID#
             t1=time.time()
+            if PID_Controller.get_line_values() in self.left:
+                flag=1
+
+            if PID_Controller.get_line_values() in self.right:
+                flag=0
+
+            while PID_Controller.get_line_values()==[] and flag==1 or flag==0 :
+                if flag==1:
+                    speed.vel_right=0.1
+                    speed.vel_left=-0.1
+                    self.pub.publish(speed)
+                if flag==0:
+                    speed.vel_right=-0.1
+                    speed.vel_left=0.1
+                    self.pub.publish(speed)
+            flag=2
+
             
+            print(PID_Controller.get_line_values())
             speed.vel_right=v_0-PID_Controller.pid_controller(t0,t1)
             speed.vel_left=v_0+PID_Controller.pid_controller(t0,t1)
             
@@ -97,7 +114,6 @@ class STRONK(DTROS):
         rospy.sleep(0.3)
 
 if __name__ == '__main__':
-  speed = WheelsCmdStamped()
   node = STRONK(node_name='stronk_node')
   node.run()
   rospy.on_shutdown(STRONK.on_shutdown)
