@@ -48,6 +48,7 @@ class ODOMEETRIA():
     #PAREMA JA VASAKU ENCODERI ANDMETE LUGEMINE    
     def LeftEncoder(self,data):
         self.L_ENCODER = data.data
+        
     def RightEncoder(self,data):
         self.R_ENCODER=data.data
         self.last_time = rospy.Time.now()

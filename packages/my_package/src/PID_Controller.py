@@ -1,5 +1,6 @@
 from smbus2 import SMBus
 import rospy
+rospy.set_param("/v_pid", [0.045 ,0.022 ,0.25 ])
 
 def get_line_values():
     bus = SMBus(1)
@@ -40,7 +41,7 @@ def pid_controller(t0,t1):
         e_int = max(min(e_int,2),-2)                            
         e_der = (e - prev_e)/delta_t  
                                   
-        #rospy.set_param("/v_pid", [0.045 ,0.022 ,0.25 ])
+        
         Kp,Ki,Kd = rospy.get_param("/v_pid")
         
         """Kp=0.045
