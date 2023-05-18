@@ -17,11 +17,12 @@ dt-exec roslaunch imu_driver imu_node.launch veh:=$VEHICLE_NAME
 #dt-exec rosrun my_package my_publisher_node.py 
 #dt-exec rosrun my_package my_subscriber_node.py 
 dt-exec rosrun my_package ob_detect.py
-dt-exec rosrun my_package line_value.py
+#dt-exec rosrun my_package line_value.py
+dt-exec rosrun my_package PID_Controller.py
 dt-exec rosrun my_package josmo_stronk.py
 #dt-exec rosrun my_package LED_Emitter.py
-dt-exec rosrun my_package imu.py
-dt-exec rosrun my_package odometry.py
+#dt-exec rosrun my_package imu.py
+#dt-exec rosrun my_package odometry.py
 
 
 # ----------------------------------------------------------------------------

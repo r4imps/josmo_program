@@ -1,90 +1,54 @@
-#!/usr/bin/env python3
-import time
+from smbus2 import SMBus
 import rospy
-from std_msgs.msg import String
 
+def get_line_values():
+    bus = SMBus(1)
+    read = bin(bus.read_byte_data(62, 17))[2:].zfill(8)
 
-I=0
-error=0
-prev_int=0
-PID_Time_Last=0
-class PID():
-    def __init__(self):
-        rospy.Subscriber('/line_bits', String, self.line)
-        rospy.set_param("/v_pid", [0.045 ,0.022 ,0.25 ,0.4])
-        self.bits=0
-    def line(self,data):
-        self.bits= data.data
-        
-    def PID_STRT(self):
-        
-        Joonebitid=['10000000',
-        '11000000',I=0
-error=0
-prev_int=0
-        '00110000',
-        '00010000',
-        '00011000',
-        '00001000',
-        '00001100',
-        '00000100',
-        '00000110',
-        '00000010',
-        '00000011',
-        '00000001']
-        
-
+    line_values = []
+    for i, value in enumerate(read):
+        if value =='1':
+            line_values.append(i + 1)
     
-    #==========PID PARAMEETRID================
-    # 
-        global I
-        global prev_error
-        global error
-        global prev_int
-        global PID_DELTA
-        global PID_Time_Last
-        vel_to_right=0.0
-        vel_to_left=0.0
-        
-         
-        Kp,Ki,Kd,v_0 = rospy.get_param("/v_pid")
-        PID_STRT=False
+    return line_values
 
-            #==========LIST TO INDEX===================
-        if self.bits in Joonebitid:
-            index = 14 - Joonebitid.index(self.bits)
-            #print(f'index on: {index}')
-            PID_STRT=True
-        #==========ROBOT PIT MODE=====================    
-        elif self.bits == '11111111':
-            vel_to_right=0.0
-            vel_to_left=0.0
-            PID_STRT=False
-            return [vel_to_right , vel_to_left]
-            
-        #==============PID CONTROLLER==============================================================
-        PID_Time= time.time()
-         
-        if PID_STRT ==True and PID_Time!=0 and PID_DELTA!=0 and self.bits:
-            #print("PID ACTIVE")
-            #KIIRUSE VÄHENDAMINE KUI ON LAI JOON
-            if self.bits=='00111100':
-                v_0=0.2
+def get_theta():
+    bus = SMBus(1)
+    read = bin(bus.read_byte_data(62, 17))[2:].zfill(8)
 
-            error= 7 - index
-            P= error
-            I=prev_int+(PID_DELTA*error)
-            I = max(min(I,1.0),-1.0)
-            D=((error-prev_error)/PID_DELTA)
-            PID= Kp*P+Ki*I+Kd*D
-            #print(f'SEE ON ERROR : {error},    PREVIOUS INT : {prev_int}')
-            #print(f'PID_START{PID_STRT}       TIME: {PID_Time} ,  LAST_TIME: {PID_Time_Last} ')
-            vel_to_right=v_0+PID
-            vel_to_left=v_0-PID
-            if vel_to_left != None and vel_to_right!=None:
-                return [vel_to_right , vel_to_left]
-        PID_DELTA= PID_Time-PID_Time_Last
-        PID_Time_Last=PID_Time
-        prev_int=I
-        prev_error=error
+    line_values = []
+    
+    for i, value in enumerate(read):
+        if value =='1':
+            line_values.append(i + 1)
+    if len(line_values) >= 1:
+        theta_hat = sum(line_values)/len(line_values)
+    if len(line_values) == 0:
+        theta_hat = 4
+
+    return theta_hat
+
+def pid_controller(t0,t1):
+        delta_t = 1
+        pose_estimation = 4.5
+        prev_int = 0
         
+        e = pose_estimation - get_theta()
+        e_int = prev_int + e*delta_t
+        prev_int = e_int                                       
+        prev_e = e                                             
+        e_int = max(min(e_int,2),-2)                            
+        e_der = (e - prev_e)/delta_t  
+                                  
+        #rospy.set_param("/v_pid", [0.045 ,0.022 ,0.25 ])
+        Kp,Ki,Kd = rospy.get_param("/v_pid")
+        
+        """Kp=0.045
+        Ki=0.022
+        Kd=0.25"""
+        
+
+        delta_t = t0-t1
+        omega = Kp*e + Ki*e_int + Kd*e_der 
+                     
+        return omega

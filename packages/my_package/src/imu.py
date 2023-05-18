@@ -1,73 +1,109 @@
 #!/usr/bin/env python3
-import rospy
-from duckietown.dtros import DTROS, NodeType
-
-from sensor_msgs.msg import Imu 
-from std_msgs.msg import String
 import time
-from math import sin
+from sensor_msgs.msg import Imu
+from duckietown.dtros import DTROS, NodeType
+import rospy
+from nav_msgs.msg import Odometry
+from math import sin, cos
+import tf 
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
-
-
-class IMU_Prog(DTROS):
+class ImuCalibration(DTROS):
     def __init__(self, node_name):
-        super(IMU_Prog, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
-        rospy.Subscriber('/josmo/imu_node/imu_data', Imu, self.callback)
-     
-
+        self.angular_x = 0.0
+        self.angular_y = 0.0
+        self.angular_z = 0.0
+        self.linear_x = 0.0
+        self.linear_y = 0.0
+        self.linear_z = 0.0
         self.angular_velocity_x = 0.0
         self.angular_velocity_y = 0.0
         self.angular_velocity_z = 0.0
         self.linear_acceleration_x = 0.0
         self.linear_acceleration_y = 0.0
         self.linear_acceleration_z = 0.0
-        self.Imu_parameters=[0.0,0.0,0.0]
+        self.i = 0
+        self.current_time = 0.0
+        self.last_time = 0.0
 
- 
-
-        
-
-
-
-
-
-    def callback(self,data):
+        super(ImuCalibration, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
+        rospy.Subscriber('/josmo/imu_node/imu_data', Imu, self.imu_data)
+    def imu_data(self, data):
         self.angular_velocity_x = data.angular_velocity.x
         self.angular_velocity_y = data.angular_velocity.y
         self.angular_velocity_z = data.angular_velocity.z
         self.linear_acceleration_x = data.linear_acceleration.x
         self.linear_acceleration_y = data.linear_acceleration.y
         self.linear_acceleration_z = data.linear_acceleration.z
+        self.current_time = time.time()
+        
+        while self.i<=1000:
+            self.i+=1
+            self.linear_x += self.linear_acceleration_x 
+            self.linear_y += self.linear_acceleration_y
+            self.linear_z += self.linear_acceleration_z
 
-
+            self.angular_x += self.angular_velocity_x
+            self.angular_y += self.angular_velocity_y
+            self.angular_z += self.angular_velocity_z
+        
     def run(self):
-        x=0
-        vx=0
-        th=0
+        pub = rospy.Publisher('odom', Odometry, queue_size=10)
+        odom_broadcaster = tf.TransformBroadcaster()
+        x = 0.0
+        distance_distance_y = 0.0
+        distance_distance_x = 0.0
+        y = 0.0
+        th = 0.0
+        delta_time = 0.0
+
+        rate = rospy.Rate(15) # 10hz
         while not rospy.is_shutdown():
-            #print("---------------------------------------------------")
-            #print([round(self.angular_velocity_x,3), self.angular_velocity_y, self.angular_velocity_z])
-            #print([round(self.linear_acceleration_y/self.gravity,1), round(-self.linear_acceleration_x/self.gravity,1)])
-            ct = rospy.Time.now()
-            lt=ct
-            dt=ct-lt
-            #
-            rotz=self.angular_velocity_z
-            dth=rotz*dt
-            th=th+dth
+            rospy.set_param("~ang_vel_offset", [self.angular_velocity_x/1000, self.angular_velocity_y/1000,self.angular_velocity_z/1000])
+            rospy.get_param("~accel_offset", [self.linear_acceleration_x/1000,self.linear_acceleration_y/1000,self.linear_acceleration_z/1000])
+            acc_y = self.linear_acceleration_y
+            acc_x = self.linear_acceleration_x
+            vel_z = self.angular_velocity_z
+            delta_time = self.current_time - self.last_time
+            dth = vel_z * delta_time
+            th = th + dth
+            #Y telje arvutus
+            if delta_time < 1600000000.0 and delta_time != 0:
+                dvy = acc_y * delta_time
+                if dvy >= -0.2 and dvy <= 0.1:
+                    vy = 0
+                vy = round(vy + dvy,1)
+                distance_y = round(vy,2) * delta_time
+                distance_distance_y = distance_distance_y + (distance_y*cos(th))
+                print("y distants ",distance_distance_y)
 
-            #
-            accx=self.linear_acceleration_x
-            dvx=accx*dt
-            vx=vx+dvx
-            dx=vx*dt
-            x=x+(dx*sin(th))
-            #print("Current position: ({:.2f}, {:.2f})".format(current_pos[0], current_pos[1]))
-            print(x)
-            time.sleep(0.1)
+            #X telje arvutus
+            if delta_time < 1600000000.0 and delta_time != 0:
+                dvx = acc_x * delta_time
+                if dvx >= -0.2 and dvx <= 0.1:
+                    vx = 0
+                vx = round(vx + dvx,1)
+                distance_x = round(vx,2) * delta_time
+                distance_distance_x = distance_distance_x + (distance_x*cos(th))
+                print("x distants", distance_distance_x)             
+            odom_quat = tf.transformations.quaternion_from_euler(0, 0, th)
+            odom_broadcaster.sendTransform(
+                (x, y, 0.),
+                odom_quat,
+                self.current_time,
+                "base_link",
+                "odom"
+            )
+            odom = Odometry()
+            odom.header.frame_id = "odom"
+            odom.pose.pose = Pose(Point(x,y,0), Quaternion(*odom_quat))
+            odom.child_frame_id = "base_link"
+            odom.twist.twist = Twist(Vector3(acc_x, vel_z, 0), Vector3(0, 0, vel_z))
+            pub.publish(odom)
+            self.last_time = self.current_time
+            rate.sleep()
             
-
 if __name__ == '__main__':
-  node = IMU_Prog(node_name='imu_node')
-  node.run()
-  rospy.spin()
+    node = ImuCalibration(node_name='imucalibration')
+    node.run()
+    rospy.spin()
