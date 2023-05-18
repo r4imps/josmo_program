@@ -112,7 +112,7 @@ def BackOnTrack(prev_bits) -> float:
                 return index
             else:
                 print(f'No reliable read in memory')
-            
+                pass
     return index
 
 
@@ -133,13 +133,13 @@ def PIDController(bits, prev_e, prev_int, delta_t, prev_bits): #add theta_ref as
         e_int (:double:) current integral error (automatically becomes prev_int_y at next iteration).
     """
     if bits in Joonebitid:
-        index = 15 - Joonebitid.index(bits)
-        print(f'Read data: {bits}')
+        index = 14 - Joonebitid.index(bits)
+        #print(f'Read data: {bits}')
     else:
         index = BackOnTrack(prev_bits)
-        print(f'INDEX NOT FOUND     BITS: {bits}')
+        #print(f'INDEX NOT FOUND     BITS: {bits}')
     # Tracking error
-    e = 8 - index
+    e = 7 - index
 
     # integral of the error
     e_int = prev_int + e * delta_t
@@ -148,7 +148,7 @@ def PIDController(bits, prev_e, prev_int, delta_t, prev_bits): #add theta_ref as
     e_int = max(min(e_int,2.0),-2.0)
 
     # derivative of the error
-    e_der = (e - prev_e) / (delta_t * 1000000)
+    e_der = (e - prev_e) / delta_t if delta_t>0 else 0.0
 
     # controller coefficients
     Kp , Ki, Kd, v_0 = float(rospy.get_param("/p")), float(rospy.get_param("/i")), float(rospy.get_param("/d")), float(rospy.get_param("/maxvel"))
@@ -156,7 +156,7 @@ def PIDController(bits, prev_e, prev_int, delta_t, prev_bits): #add theta_ref as
     # PID controller for omega
     omega = Kp*e + Ki*e_int + Kd*e_der
 
-    print(f'e: {e} e_int: {e_int} e_der: {e_der} omega" {omega}')
+    #print(f'e: {e} e_int: {e_int} e_der: {e_der} omega" {omega}')
     
     #print(f"\n\nDelta time : {delta_t} \nE : {np.rad2deg(e)} \nE int : {e_int} \nPrev e : {prev_e} \nU : {u} \nTheta hat: {np.rad2deg(theta_hat)} \n")
     
