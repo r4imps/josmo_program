@@ -5,7 +5,7 @@ from Biti_Vabriks import *
 # Heading control
 # Do not change the name of the function, inputs or outputs. It will break things.
 def BackOnTrack(prev_bits) -> float:
-    index = 8
+    index = 7
     for last_reliable_read in prev_bits[::-1]:
         if last_reliable_read != '00000000':
             
@@ -18,7 +18,7 @@ def BackOnTrack(prev_bits) -> float:
                 print(f'vasakule')
                 return index
             else:
-                print(f'No reliable read in memory')
+                #print(f'No reliable read in memory')
                 pass
     return index
 
@@ -43,7 +43,10 @@ def PIDController(bits, prev_e, prev_int, delta_t, prev_bits): #add theta_ref as
         index = 14 - Joonebitid.index(bits)
         #print(f'Read data: {bits}')
     else:
-        index = BackOnTrack(prev_bits)
+        if bits in (Paremale_90 + Vasakule_90):
+            index = BackOnTrack(bits)
+        else:
+            index = BackOnTrack(prev_bits)
         #print(f'INDEX NOT FOUND     BITS: {bits}')
     # Tracking error
     e = 7 - index
@@ -55,7 +58,7 @@ def PIDController(bits, prev_e, prev_int, delta_t, prev_bits): #add theta_ref as
     e_int = max(min(e_int,2.0),-2.0)
 
     # derivative of the error
-    e_der = (e - prev_e) / delta_t if delta_t>0 else 0.0
+    e_der = (e - prev_e) / (delta_t * 10000000) if delta_t>0 else 0.0
 
     # controller coefficients
     Kp , Ki, Kd, v_0 = float(rospy.get_param("/p")), float(rospy.get_param("/i")), float(rospy.get_param("/d")), float(rospy.get_param("/maxvel"))

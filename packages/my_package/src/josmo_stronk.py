@@ -32,15 +32,57 @@ class STRONK(DTROS):
         self.pub.publish(speed)
         rospy.on_shutdown()
 
+    def ob_avoid(self):
+        
+        speed.vel_right=0
+        speed.vel_left=0
+        self.pub.publish(speed)
+        rospy.sleep(1)
+
+        speed.vel_right=0.5
+        speed.vel_left=0
+        self.pub.publish(speed)
+        rospy.sleep(0.45)
+
+        speed.vel_right=0.1
+        speed.vel_left=0.25
+        self.pub.publish(speed)
+        rospy.sleep(1.5)
+
+        speed.vel_right=0
+        speed.vel_left=0.25
+        self.pub.publish(speed)
+        rospy.sleep(0.5)
+
+        speed.vel_right=0.2
+        speed.vel_left=0.2
+        self.pub.publish(speed)
+        rospy.sleep(1.5)
+
+        speed.vel_right=0.0
+        speed.vel_left=0.2
+        self.pub.publish(speed)
+        rospy.sleep(1)
+
+        speed.vel_right=0.2
+        speed.vel_left=0.2
+        self.pub.publish(speed)
+        rospy.sleep(1)
+
+        speed.vel_right=0.2
+        speed.vel_left=0.1
+        self.pub.publish(speed)
+        rospy.sleep(0.3)
+
     def run(self):
         rate = rospy.Rate(20)
         prev_bits = []
         last_time = time.time() - 0.002
         prev_e = 0.0
         prev_int = 0.0
-        start_time = last_time
+        #start_time = last_time
 
-        avoiding_obstruction = False
+        #avoiding_obstruction = False
 
         while not rospy.is_shutdown():
             while self.distance == 0.0:
@@ -51,18 +93,18 @@ class STRONK(DTROS):
 
 ######################################      Move             ###################################
 
-            if 0.5 < self.distance < 10.0 and self.bits != '11111111' and avoiding_obstruction == False:
+            if 0.25 < self.distance < 10.0 and self.bits != '11111111' """and avoiding_obstruction == False""":
                 delta_t = time.time()- last_time
                 v_0, omega, prev_e, prev_int = PIDController(self.bits, prev_e, prev_int, delta_t, prev_bits)
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
                 self.pub.publish(speed)
 
-                start_time = time.time()  #takistuse tuvastamise aeg
+                #start_time = time.time()  #takistuse tuvastamise aeg
             
-            elif self.distance < 0.5 or avoiding_obstruction == True:
-                speed.vel_right, speed.vel_left , avoiding_obstruction = AvoidObstacle(start_time)
-                self.pub.publish(speed)
+            elif self.distance < 0.25:
+                print(f'avoiding object {self.bits} {self.distance}')
+                self.ob_avoid()
 
             else:          ############### PIT MODE ####################
                 speed.vel_right = 0.0
