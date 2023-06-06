@@ -9,13 +9,7 @@ import numpy as np
 class ODOMETRY(DTROS):
     def __init__(self, node_name):
         super(ODOMETRY, self).__init__(node_name=node_name, NodeType =NodeType.GENERIC)
-
-
-        rospy.Subscriber('/josmo/right_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_R_Encoder)
-        rospy.Subscriber('/josmo/left_wheel_encoder_node/tick', WheelEncoderStamped, self.Callback_L_Encoder)
-
-        rospy.Subscriber('/josmo/front_center_tof_driver_node/range', Range, self.callback)        
-
+        
         self.pub = rospy.Publisher('josmo/odometry_node/data')
 
         self.Delta_x=0
@@ -27,9 +21,6 @@ class ODOMETRY(DTROS):
 
     def Callback_L_Encoder(self,data):
         self.L_encoder = data.data
-
-    def callback(self, data):
-        self.distance = data.range
 
     def run(self):
         N_tot= 135

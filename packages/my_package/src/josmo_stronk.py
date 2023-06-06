@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import rospy
+import numpy
 from duckietown.dtros import DTROS, NodeType
 from duckietown_msgs.msg import WheelsCmdStamped
 from std_msgs.msg import String
 from sensor_msgs.msg import Range
-from PID_Controller import PIDController
+import PID_Controller
 import time
-from AvoidObstacle import AvoidObstacle
 
 speed = WheelsCmdStamped()
 
@@ -72,37 +72,45 @@ class STRONK(DTROS):
         speed.vel_right=0.2
         speed.vel_left=0.1
         self.pub.publish(speed)
-        rospy.sleep(0.3)
+        while self.bits == '00000000':
+            rospy.sleep(0.002)
 
+    def delta_distance(self):
+        self.average_distances = []
+        if len(self.average_distances) == 3:
+            self.average_distances.append(self.distance)
+            self.average_distances.pop(0)
+        else:
+            self.average_distances.append(self.distance)
+
+        return numpy.average(self.average_distances)
+    
     def run(self):
         rate = rospy.Rate(20)
         prev_bits = []
         last_time = time.time() - 0.002
         prev_e = 0.0
         prev_int = 0.0
-        #start_time = last_time
-
-        #avoiding_obstruction = False
 
         while not rospy.is_shutdown():
             while self.distance == 0.0:
                 rate.sleep()
-                        
+
         #roboti käivitamisel peab pisut ootama kuni kõik sensorid käivitatakse,
         #vastasel juhul saab programm vale andmeid ja hakkab nende põhjal tegema mitte vajalike operatsioone
 
 ######################################      Move             ###################################
 
-            if 0.25 < self.distance < 10.0 and self.bits != '11111111' """and avoiding_obstruction == False""":
+            if 0.25 < self.delta_distance() < 10.0 and self.bits != '11111111':
                 delta_t = time.time()- last_time
-                v_0, omega, prev_e, prev_int = PIDController(self.bits, prev_e, prev_int, delta_t, prev_bits)
+                v_0, omega, prev_e, prev_int = PID_Controller.PIDController(self.bits, prev_e, prev_int, delta_t, prev_bits)
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
                 self.pub.publish(speed)
 
-                #start_time = time.time()  #takistuse tuvastamise aeg
-            
-            elif self.distance < 0.25:
+                print(f'vel_left: {speed.vel_left} vel_right: {speed.vel_right} Bits: {self.bits} distance: {self.delta_distance()}')
+
+            elif self.delta_distance() < 0.25:
                 print(f'avoiding object {self.bits} {self.distance}')
                 self.ob_avoid()
 
@@ -111,17 +119,15 @@ class STRONK(DTROS):
                 speed.vel_left = 0.0
                 self.pub.publish(speed)
                 delta_t = 0.0
-                print(f'PIT MODE')
+                #print(f'PIT MODE')
 
                             ############### 8X8 log ################
 
-            if len(prev_bits)<=7:
+            if len(prev_bits)<8:
                 prev_bits.append(self.bits)
             else:
                 prev_bits.pop(0)
                 prev_bits.append(self.bits)
-
-            print(f'vel_right: {speed.vel_right} vel_left: {speed.vel_left} Bits: {self.bits} distance: {self.distance}')
             
             rate.sleep()
             last_time = time.time()
