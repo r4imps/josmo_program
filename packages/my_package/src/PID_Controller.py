@@ -2,31 +2,32 @@
 import rospy
 from Biti_Vabriks import *
 
-def BackOnTrack(prev_bits) -> float:
+def BackOnTrack(prev_bits: list) -> float:
     index = 7.0
-    for last_reliable_read in prev_bits[::-1]:          
-        if last_reliable_read in Paremale_90:
+    for el in prev_bits:      
+        if el in Paremale_90:
             index = 15.0
             print(f'paremale')
+            return index
             
-        elif last_reliable_read in Vasakule_90:
+        elif el in Vasakule_90:
             index = 0.0
             print(f'vasakule')
+            return index
             
+        elif el in Joonebitid:
+            index = Joonebitid.index(el)
+            return index
         else:
             pass
-        
-    if index == 7.0:
-        print(f'No reliable read in memory')
-
-    return index
-    
+    print(f'No reliable read in memory')
+                
 
 
 # Heading control
 # Do not change the name of the function, inputs or outputs. It will break things.
 
-def PIDController(bits, prev_e, prev_int, delta_t, prev_bits): #add theta_ref as input
+def PIDController(prev_e, prev_int, delta_t, prev_bits: list): #add theta_ref as input
     """
     Args:
         v_0 (:double:) linear Duckiebot speed (given)
@@ -41,15 +42,14 @@ def PIDController(bits, prev_e, prev_int, delta_t, prev_bits): #add theta_ref as
         e (:double:) current tracking error (automatically becomes prev_e_y at next iteration).
         e_int (:double:) current integral error (automatically becomes prev_int_y at next iteration).
     """
-    if bits in Joonebitid:
-        index = 14.0 - float(Joonebitid.index(bits))
-        #print(f'Read data: {bits}')
+    prev_bits.reverse()
+
+    if prev_bits[0] in Joonebitid:
+        index = 14.0 - Joonebitid.index(prev_bits[0])
     else:
-        if bits in (Paremale_90 + Vasakule_90):
-            index = float(BackOnTrack(bits))
-        else:
-            index = float(BackOnTrack(prev_bits))
-        #print(f'INDEX NOT FOUND     BITS: {bits}')
+        index = BackOnTrack(prev_bits)
+        rospy.sleep(0.3)
+        
     # Tracking error
     e = 7.0 - index
 
@@ -60,7 +60,7 @@ def PIDController(bits, prev_e, prev_int, delta_t, prev_bits): #add theta_ref as
     e_int = max(min(e_int,2.0),-2.0)
 
     # derivative of the error
-    e_der = (e - prev_e) / (delta_t * 100000000) if delta_t>0 else 0.0
+    e_der = (e - prev_e) / (delta_t * 100000000)  if delta_t>0 else 0.0
 
     # controller coefficients
     Kp , Ki, Kd, v_0 = float(rospy.get_param("/p")), float(rospy.get_param("/i")), float(rospy.get_param("/d")), float(rospy.get_param("/maxvel"))

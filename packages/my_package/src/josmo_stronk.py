@@ -7,6 +7,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Range
 import PID_Controller
 import time
+from Biti_Vabriks import *
 
 speed = WheelsCmdStamped()
 
@@ -19,6 +20,8 @@ class STRONK(DTROS):
 
         self.distance = 0.0
         self.bits = ''
+        self.average_distances = []
+        self.prev_bits = ['00011000']
     
     def callback(self, data) -> str:
         self.bits = data.data
@@ -37,47 +40,38 @@ class STRONK(DTROS):
         speed.vel_right=0
         speed.vel_left=0
         self.pub.publish(speed)
-        rospy.sleep(1)
+        rospy.sleep(0.25)
 
-        speed.vel_right=0.5
+        speed.vel_right=0
+        speed.vel_left=0.35
+        self.pub.publish(speed)
+        rospy.sleep(0.65)
+
+        speed.vel_right=0.45
+        speed.vel_left=0.15
+        self.pub.publish(speed)
+        rospy.sleep(3.4)
+
+        speed.vel_right=0.2
+        speed.vel_left=0.3
+        self.pub.publish(speed)
+        while self.bits == '00000000':
+            rospy.sleep(0.05)
+
+        speed.vel_right=0
         speed.vel_left=0
         self.pub.publish(speed)
-        rospy.sleep(0.45)
-
-        speed.vel_right=0.1
-        speed.vel_left=0.25
-        self.pub.publish(speed)
-        rospy.sleep(1.5)
+        rospy.sleep(0.25)
 
         speed.vel_right=0
         speed.vel_left=0.25
         self.pub.publish(speed)
         rospy.sleep(0.5)
+        
 
-        speed.vel_right=0.2
-        speed.vel_left=0.2
-        self.pub.publish(speed)
-        rospy.sleep(1.5)
-
-        speed.vel_right=0.0
-        speed.vel_left=0.2
-        self.pub.publish(speed)
-        rospy.sleep(1)
-
-        speed.vel_right=0.2
-        speed.vel_left=0.2
-        self.pub.publish(speed)
-        rospy.sleep(1)
-
-        speed.vel_right=0.2
-        speed.vel_left=0.1
-        self.pub.publish(speed)
-        while self.bits == '00000000':
-            rospy.sleep(0.002)
-
-    def delta_distance(self):
-        self.average_distances = []
-        if len(self.average_distances) == 3:
+    def delta_distance(self) -> float:
+        
+        if len(self.average_distances) == 10:
             self.average_distances.append(self.distance)
             self.average_distances.pop(0)
         else:
@@ -85,49 +79,52 @@ class STRONK(DTROS):
 
         return numpy.average(self.average_distances)
     
+    def history(self) -> list:
+                
+                    ############### 8X8 log ################
+
+        if len(self.prev_bits)<8:
+            self.prev_bits.append(self.bits)
+        else:
+            self.prev_bits.pop(0)
+            self.prev_bits.append(self.bits)
+
+        return self.prev_bits
+    
     def run(self):
         rate = rospy.Rate(20)
-        prev_bits = []
         last_time = time.time() - 0.002
         prev_e = 0.0
         prev_int = 0.0
 
         while not rospy.is_shutdown():
-            while self.distance == 0.0:
+            while self.distance == 0.0 :
                 rate.sleep()
 
-        #roboti käivitamisel peab pisut ootama kuni kõik sensorid käivitatakse,
+        #roboti käivitamisel peab pisut ootama kuni kõik vajalikud sensorid käivitatakse,
         #vastasel juhul saab programm vale andmeid ja hakkab nende põhjal tegema mitte vajalike operatsioone
 
-######################################      Move             ###################################
-
-            if 0.25 < self.delta_distance() < 10.0 and self.bits != '11111111':
-                delta_t = time.time()- last_time
-                v_0, omega, prev_e, prev_int = PID_Controller.PIDController(self.bits, prev_e, prev_int, delta_t, prev_bits)
-                speed.vel_right = v_0 + omega
-                speed.vel_left = v_0 - omega
-                self.pub.publish(speed)
-
-                print(f'vel_left: {speed.vel_left} vel_right: {speed.vel_right} Bits: {self.bits} distance: {self.delta_distance()}')
-
-            elif self.delta_distance() < 0.25:
-                print(f'avoiding object {self.bits} {self.distance}')
-                self.ob_avoid()
-
-            else:          ############### PIT MODE ####################
+            if self.history() == ['11111111', '11111111', '11111111', '11111111', '11111111', '11111111', '11111111', '11111111']:
                 speed.vel_right = 0.0
                 speed.vel_left = 0.0
                 self.pub.publish(speed)
                 delta_t = 0.0
                 #print(f'PIT MODE')
 
-                            ############### 8X8 log ################
+            elif self.delta_distance() < 0.25: ########### OB_AVOID ############
+                print(f'avoiding object {self.bits} {self.delta_distance()} {self.average_distances}')
+                self.ob_avoid()
 
-            if len(prev_bits)<8:
-                prev_bits.append(self.bits)
-            else:
-                prev_bits.pop(0)
-                prev_bits.append(self.bits)
+            else:          ############## MOVE #################
+                delta_t = time.time()- last_time
+                v_0, omega, prev_e, prev_int = PID_Controller.PIDController(prev_e, prev_int, delta_t, self.history())
+                speed.vel_right = v_0 + omega
+                speed.vel_left = v_0 - omega
+                self.pub.publish(speed)
+
+                print(f'vel_left: {round(speed.vel_left,4)} vel_right: {round(speed.vel_right,4)} Bits: {self.bits} delta_time:{delta_t}')
+
+                
             
             rate.sleep()
             last_time = time.time()
