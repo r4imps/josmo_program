@@ -48,30 +48,36 @@ class STRONK(DTROS):
         rate = rospy.Rate(20)
         flag=2
         while not rospy.is_shutdown():
-            Odom=ODOMEETRIA()
-            print(Odom.ODOMETRY_FUNC(self.ticks_right,self.ticks_left))
-
             #PID#
             t1=time.time()
-            if PID_Controller.get_line_values() in self.left:
-                flag=1
-            if PID_Controller.get_line_values() in self.right:
-                flag=0
-            while PID_Controller.get_line_values()==[] and flag==1 or flag==0 :
-                if flag==1:
-                    speed.vel_right=0.1
-                    speed.vel_left=-0.1
-                    self.pub.publish(speed)
-                if flag==0:
-                    speed.vel_right=-0.1
-                    speed.vel_left=0.1
-                    self.pub.publish(speed)
-            flag=2
-           
             
-            #print(PID_Controller.get_line_values())
+            
+            
+            
+            if PID_Controller.get_line_values() in self.right:
+                flag = 1
+                
+
+            if PID_Controller.get_line_values() in self.left:
+                flag = 0
+                
+            
+            while PID_Controller.get_line_values() == [] and flag == 1:
+                speed.vel_left = 0.2
+                speed.vel_right = -0.1
+                self.pub.publish(speed)
+                
+            while PID_Controller.get_line_values() == [] and flag == 0:
+                speed.vel_left = -0.1
+                speed.vel_right = 0.2
+                self.pub.publish(speed)
+            
             speed.vel_right=v_0-PID_Controller.pid_controller(t0,t1)
             speed.vel_left=v_0+PID_Controller.pid_controller(t0,t1)
+            print(PID_Controller.get_line_values())
+           
+            
+            
             
             if self.distance<0.25:
                 self.ob_avoid()
