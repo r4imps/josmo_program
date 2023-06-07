@@ -47,8 +47,8 @@ class STRONK(DTROS):
         self.pub.publish(speed)
         rospy.sleep(0.65)
 
-        speed.vel_right=0.45
-        speed.vel_left=0.15
+        speed.vel_right=0.47
+        speed.vel_left=0.16
         self.pub.publish(speed)
         rospy.sleep(3.4)
 
@@ -71,7 +71,7 @@ class STRONK(DTROS):
 
     def delta_distance(self) -> float:
         
-        if len(self.average_distances) == 10:
+        if len(self.average_distances) == 5:
             self.average_distances.append(self.distance)
             self.average_distances.pop(0)
         else:
@@ -103,34 +103,37 @@ class STRONK(DTROS):
 
         #roboti käivitamisel peab pisut ootama kuni kõik vajalikud sensorid käivitatakse,
         #vastasel juhul saab programm vale andmeid ja hakkab nende põhjal tegema mitte vajalike operatsioone
-
-            if self.history() == ['11111111', '11111111', '11111111', '11111111', '11111111', '11111111', '11111111', '11111111']:
-                speed.vel_right = 0.0
-                speed.vel_left = 0.0
-                self.pub.publish(speed)
-                delta_t = 0.0
-                #print(f'PIT MODE')
-
-            elif self.delta_distance() < 0.25: ########### OB_AVOID ############
+            
+            if self.delta_distance() < 0.25: ########### OB_AVOID ############
                 print(f'avoiding object {self.bits} {self.delta_distance()} {self.average_distances}')
                 self.ob_avoid()
 
-            else:          ############## MOVE #################
+            if self.bits in Joonebitid:
                 delta_t = time.time()- last_time
-                v_0, omega, prev_e, prev_int = PID_Controller.PIDController(prev_e, prev_int, delta_t, self.history())
+                v_0, omega, prev_e, prev_int = PID_Controller.PIDController(prev_e, prev_int, delta_t, self.bits)
                 speed.vel_right = v_0 + omega
                 speed.vel_left = v_0 - omega
+
                 self.pub.publish(speed)
+                last_time = time.time()
 
-                print(f'vel_left: {round(speed.vel_left,4)} vel_right: {round(speed.vel_right,4)} Bits: {self.bits} delta_time:{delta_t}')
 
-                
-            
-            rate.sleep()
-            last_time = time.time()
- 
-            
+            else:          ############## MOVE #################
+                v_0 = 0.3
+                while self.bits not in Joonebitid:
+                    if self.bits in Vasakule_90:
+                        speed.vel_right = v_0 * 0.75
+                        speed.vel_left = -0.25 * (v_0)
+                        self.pub.publish(speed)
+                    elif self.bits in Paremale_90:
+                        speed.vel_right = -0.25 * (v_0)
+                        speed.vel_left = v_0 * 0.75
+                        self.pub.publish(speed)
+                    else:
+                        break               
 
+            rate.sleep()       
+          
 
 if __name__ == '__main__':
     node = STRONK(node_name='stronk_node')
